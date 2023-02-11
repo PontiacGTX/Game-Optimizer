@@ -18,6 +18,7 @@ using Microsoft.Win32;
 using ThreadState = System.Diagnostics.ThreadState;
 using System.ServiceProcess;
 using System.Runtime.CompilerServices;
+using System.Net.NetworkInformation;
 
 namespace GameOptimizer
 {
@@ -73,6 +74,28 @@ namespace GameOptimizer
 
         public List<ProcessList> ListItems { get; private set; }
 
+        [DllImport("psapi.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool GetPerformanceInfo([Out] out PerformanceInformation PerformanceInformation, [In] int Size);
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct PerformanceInformation
+        {
+            public int Size;
+            public IntPtr CommitTotal;
+            public IntPtr CommitLimit;
+            public IntPtr CommitPeak;
+            public IntPtr PhysicalTotal;
+            public IntPtr PhysicalAvailable;
+            public IntPtr SystemCache;
+            public IntPtr KernelTotal;
+            public IntPtr KernelPaged;
+            public IntPtr KernelNonPaged;
+            public IntPtr PageSize;
+            public int HandlesCount;
+            public int ProcessCount;
+            public int ThreadCount;
+        }
         public class SelectedCoreCount
         {
             public static readonly Int32 CoreTwo = 0x0002;
@@ -102,6 +125,7 @@ namespace GameOptimizer
         static bool firstExecution2 = true;
         static string GamePath;
         static string FileName;
+        NetworkInterface Adapter { get; set; }
         static string PlainName { get; set; }
         private string TcpIpKeyPath;
         List<Process> GameProcessList;
@@ -116,8 +140,12 @@ namespace GameOptimizer
         Process GameProcess;
         private bool ExistKey { get { return (Registry.LocalMachine.GetValue(Key, "Priority") != null); } }
         private string Key = @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games";
-
-
+        private PingReply status;
+        private Task<bool> secondaryTask;
+        private Task mainTask;
+        private Task memoryTask;
+        private bool failedInternetStartupCheck;
+        private bool isOnline;
 
         private enum ThreadPriorityLevel
         {
@@ -129,12 +157,14 @@ namespace GameOptimizer
 
         public GameOptimizerForm()
         {
+            Adapter =  System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces().FirstOrDefault(n => n.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up && n.Description.Contains("Ethernet") || n.OperationalStatus == OperationalStatus.Up && n.Description.Contains("MediaTek Wi-Fi 6 MT7921 Wireless LAN Card"));
             InitializeComponent();
             GetProcessorCount();
             ClearStandByList();
             GetCurrentTimerResolution();
             StopServicesAndProcess();
             EmptyWorkingSet();
+            StartUpCheck();
         }
         const int SE_PRIVILEGE_ENABLED = 2;
         const string SE_INCREASE_QUOTA_NAME = "SeIncreaseQuotaPrivilege";
@@ -184,6 +214,7 @@ namespace GameOptimizer
             }
 
         }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void StopServicesAndProcess()
         {
@@ -577,7 +608,55 @@ namespace GameOptimizer
                 this.cmbxAffinityCount.Items.Clear();
             }
         }
+        async Task StartUpCheck()
+        {
+            try
+            {
+                status = IsInternetConnectionAvailable().Result;
+                secondaryTask = Task.FromResult(status.Status.Equals(IPStatus.Success));
 
+                if (Adapter != null)
+                {
+                    this.memoryTask = new Task(async () =>
+                    {
+                        this.BeginInvoke(new MethodInvoker(async delegate
+                        {
+                            await AutomaticMemoryCleanup();
+                        }));
+                    });
+                    mainTask = new Task(async () =>
+                    {
+                        await GetNetworkSpeed();
+                    });
+
+                    mainTask.Start();
+                    memoryTask.Start();
+                }
+            }
+            catch (Exception ex)
+            {
+                failedInternetStartupCheck = true;
+                isOnline = false;
+                lblInternet.Text = "Sin Conexion";
+            }
+        }
+        async Task<PingReply> IsInternetConnectionAvailable()
+        {
+            try
+            {
+                Ping myPing = new Ping();
+                String host = "8.8.8.8";
+                byte[] buffer = new byte[32];
+                int timeout = 1000;
+                PingOptions pingOptions = new PingOptions();
+                PingReply reply = myPing.Send(host, timeout, buffer, pingOptions);
+                return reply;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
         private void SetAffinity(ref Process GameProcess)
         {
             if (!GameProcess.HasExited)
@@ -1051,9 +1130,44 @@ namespace GameOptimizer
             if (GameOptimizerForm.NtSetSystemInformation(80, gcHandle.AddrOfPinnedObject(), systemInfoLength) != 0)
             {
                 var str = new Win32Exception(Marshal.GetLastWin32Error()).ToString();
-                lblStandByRAM.Text = str.Substring(str.LastIndexOf(':') + 2, str.Length - (str.LastIndexOf(':') + 2)).ToString();
+                //this.BeginInvoke(new MethodInvoker(delegate{
+                //    lblStandByRAM.Text = str.Substring(str.LastIndexOf(':') + 2, str.Length - (str.LastIndexOf(':') + 2)).ToString();
+                //}));
+                
             }
             gcHandle.Free();
+        }
+
+        private float GetCurrentMemoryUsage()
+        {
+            return GetTotalMemoryInMiB() - GetPhysicalAvailableMemoryInMiB();
+        }
+        public static Int64 GetPhysicalAvailableMemoryInMiB()
+        {
+            PerformanceInformation pi = new PerformanceInformation();
+            if (GetPerformanceInfo(out pi, Marshal.SizeOf(pi)))
+            {
+                return Convert.ToInt64((pi.PhysicalAvailable.ToInt64() * pi.PageSize.ToInt64() / 1048576));
+            }
+            else
+            {
+                return -1;
+            }
+
+        }
+
+        public static Int64 GetTotalMemoryInMiB()
+        {
+            PerformanceInformation pi = new PerformanceInformation();
+            if (GetPerformanceInfo(out pi, Marshal.SizeOf(pi)))
+            {
+                return Convert.ToInt64((pi.PhysicalTotal.ToInt64() * pi.PageSize.ToInt64() / 1048576));
+            }
+            else
+            {
+                return -1;
+            }
+
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void tmrRam_Tick(object sender, EventArgs e)
@@ -1062,7 +1176,10 @@ namespace GameOptimizer
             {
                 ClearFileSystemCache(true);
                 ClearStandByList();
+
             }
+
+            
 
             if (chckbxTimerRes.Checked)
             {
@@ -1102,6 +1219,8 @@ namespace GameOptimizer
                 if (chckbxTimerRes.Checked)
                 {
                     tmrRam.Interval = 900000;
+                    tmrRam.Enabled = true;
+                    tmrRam.Start();
                 }
                 else
                 {
@@ -1236,7 +1355,7 @@ namespace GameOptimizer
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void btnProcess_Click(object sender, EventArgs e)
         {
-            this.ClientSize = new System.Drawing.Size(768, 452);
+            this.ClientSize = new System.Drawing.Size(890, 452);
             this.dataGridView1.Enabled = true;
             this.dataGridView1.Visible = true;
             
@@ -1414,6 +1533,107 @@ namespace GameOptimizer
                    MessageBox.Show(ex.ToString());
                 }
             }
+        bool GetIfConnected(bool connected, IPStatus? status = IPStatus.Unknown)
+        {
+            BeginInvoke(new MethodInvoker(delegate
+            {
+                this.lblInternet.Text = status == IPStatus.Success? "Conectado" : $"Sin Conexion ({status})";
+            }));
+            return connected;
+        }
+        async Task AutomaticMemoryCleanup()
+        {
+            Stopwatch sw = new Stopwatch();
+            long limit = 600000;
+            bool wasCleaned = false;
+            await Task.Run(async () =>
+            {
+                while(true)
+                {
+                    if(GetCurrentMemoryUsage()> (float)nudAutRamFreeup.Value)
+                    {
+                        if (!wasCleaned)
+                        {
+                            int tries = 0;
+                            while (tries<7)
+                            {
+                                EmptyWorkingSet();
+                                ClearStandByList();
+                                tries++;
+                            }
+                        }
+                        if (!sw.IsRunning)
+                        {
+                            sw.Start();
+                            wasCleaned = true;
+                        }
+                        if(sw.ElapsedMilliseconds>=limit)
+                        {
+                            sw.Stop();
+                            wasCleaned = false;
+                        }
+                    }
+                }
+            });
+        }
+        async Task GetNetworkSpeed()
+        {
+            IEnumerable<Double> reads = new List<double>();
+            var sw = new Stopwatch();
+            var lastBr = Adapter.GetIPv4Statistics().BytesReceived;
+            await Task.Run(async () =>
+            {
+                ulong i = 0;
+                while (true)
+                {
+
+                    sw.Restart();
+                    var RES = (await IsInternetConnectionAvailable());
+                    isOnline = (RES?.Status ?? IPStatus.Unknown).Equals(IPStatus.Success);
+
+                    this.BeginInvoke(new MethodInvoker(delegate
+                    {
+                        if (!GetIfConnected(isOnline, RES?.Status))
+                        {
+                            if (!timer.Enabled)
+                            {
+                                timer.Enabled = true;
+                                timer.Start();
+                            }
+                        }
+                    }));
+                    Thread.Sleep(10);
+                    var elapsed = sw.Elapsed.TotalSeconds;
+                    var br = Adapter.GetIPv4Statistics().BytesReceived;
+
+                    double local = (br - lastBr) / elapsed;
+                    lastBr = br;
+
+                    // Keep last 20, ~2 seconds
+                    reads = new[] { local }.Concat(reads).Take(20);
+
+                    if (i % (ulong)10 == (ulong)0)
+                    { // ~1 second
+                        var bSec = reads.Sum() / reads.Count();
+
+                        var kbs = ((bSec * 8) / 1024) / 8;
+
+                        this.BeginInvoke(new MethodInvoker(delegate
+                        {
+                            lblDlSpeed.Text = "Kb/s " + kbs;
+                            lblInternet.Text = $"{(RES?.Status == IPStatus.Success  ? "Conectado" : $"Sin Conexion ({RES?.Status})")}";
+                            lblRamUsage.Text = $"RAM: {GetCurrentMemoryUsage()}/{GetTotalMemoryInMiB()} MB";
+                        }));
+                    }
+
+                    if (i == ulong.MaxValue)
+                        i = 0;
+
+                    i++;
+                }
+
+            });
+        }
         private void button1_Click(object sender, EventArgs e)
         {
             ClearStandByList();
