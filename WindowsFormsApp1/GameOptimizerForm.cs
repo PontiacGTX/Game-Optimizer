@@ -126,6 +126,9 @@ namespace GameOptimizer
         static string GamePath;
         static string FileName;
         NetworkInterface Adapter { get; set; }
+
+        private PropertyCleanup _cleanUpMemory;
+
         static string PlainName { get; set; }
         private string TcpIpKeyPath;
         List<Process> GameProcessList;
@@ -158,6 +161,7 @@ namespace GameOptimizer
         public GameOptimizerForm()
         {
             Adapter =  System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces().FirstOrDefault(n => n.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up && n.Description.Contains("Ethernet") || n.OperationalStatus == OperationalStatus.Up && n.Description.Contains("MediaTek Wi-Fi 6 MT7921 Wireless LAN Card"));
+            _cleanUpMemory = new PropertyCleanup { WasCleaned = false };
             InitializeComponent();
             GetProcessorCount();
             ClearStandByList();
@@ -617,20 +621,13 @@ namespace GameOptimizer
 
                 if (Adapter != null)
                 {
-                    this.memoryTask = new Task(async () =>
-                    {
-                        this.BeginInvoke(new MethodInvoker(async delegate
-                        {
-                            await AutomaticMemoryCleanup();
-                        }));
-                    });
+                   
                     mainTask = new Task(async () =>
                     {
                         await GetNetworkSpeed();
                     });
 
                     mainTask.Start();
-                    memoryTask.Start();
                 }
             }
             catch (Exception ex)
@@ -1069,12 +1066,13 @@ namespace GameOptimizer
                     GameProcess.Refresh();
                 }
             }
-
-            if (!GameProcess.HasExited)
-                SetAffinity(ref GameProcess);
-            else if (!GameProcess1.HasExited)
-                SetAffinity(ref GameProcess1);
-
+            if (GameProcess != null)
+            {
+                if (!GameProcess.HasExited)
+                    SetAffinity(ref GameProcess);
+                else if (!GameProcess1.HasExited)
+                    SetAffinity(ref GameProcess1);
+            }
             if (chckboxPriority.Checked)
             {
                 if (!tmrPriority.Enabled)
@@ -1533,6 +1531,10 @@ namespace GameOptimizer
                    MessageBox.Show(ex.ToString());
                 }
             }
+        class PropertyCleanup
+        {
+            public bool WasCleaned { get; set; }
+        }
         bool GetIfConnected(bool connected, IPStatus? status = IPStatus.Unknown)
         {
             BeginInvoke(new MethodInvoker(delegate
@@ -1541,52 +1543,50 @@ namespace GameOptimizer
             }));
             return connected;
         }
-        async Task AutomaticMemoryCleanup()
+        async Task AutomaticMemoryCleanup( PropertyCleanup clean, Stopwatch sw1, long limit)
         {
-            Stopwatch sw = new Stopwatch();
-            long limit = 600000;
-            bool wasCleaned = false;
-            await Task.Run(async () =>
+
+            if (GetCurrentMemoryUsage() > (float)nudAutRamFreeup.Value)
             {
-                while(true)
+                if (!clean.WasCleaned)
                 {
-                    if(GetCurrentMemoryUsage()> (float)nudAutRamFreeup.Value)
+                    int tries = 0;
+                    await Task.Run(() =>
                     {
-                        if (!wasCleaned)
+                        while (tries < 7)
                         {
-                            int tries = 0;
-                            while (tries<7)
-                            {
-                                EmptyWorkingSet();
-                                ClearStandByList();
-                                tries++;
-                            }
+                            EmptyWorkingSet();
+                            ClearStandByList();
+                            tries++;
                         }
-                        if (!sw.IsRunning)
-                        {
-                            sw.Start();
-                            wasCleaned = true;
-                        }
-                        if(sw.ElapsedMilliseconds>=limit)
-                        {
-                            sw.Stop();
-                            wasCleaned = false;
-                        }
-                    }
+                    });
                 }
-            });
+                if (!sw1.IsRunning)
+                {
+                    sw1.Start();
+                    clean.WasCleaned = true;
+                }
+                if (sw1.ElapsedMilliseconds >= limit)
+                {
+                    sw1.Stop();
+                    clean.WasCleaned = false;
+                }
+            }
         }
         async Task GetNetworkSpeed()
         {
             IEnumerable<Double> reads = new List<double>();
             var sw = new Stopwatch();
             var lastBr = Adapter.GetIPv4Statistics().BytesReceived;
+            Stopwatch sw1 = new Stopwatch();
+            long limit = 600000;
             await Task.Run(async () =>
             {
                 ulong i = 0;
                 while (true)
                 {
 
+                    await AutomaticMemoryCleanup(_cleanUpMemory, sw1, limit);
                     sw.Restart();
                     var RES = (await IsInternetConnectionAvailable());
                     isOnline = (RES?.Status ?? IPStatus.Unknown).Equals(IPStatus.Success);
@@ -1602,7 +1602,7 @@ namespace GameOptimizer
                             }
                         }
                     }));
-                    Thread.Sleep(10);
+                    //Thread.Sleep(10);
                     var elapsed = sw.Elapsed.TotalSeconds;
                     var br = Adapter.GetIPv4Statistics().BytesReceived;
 
