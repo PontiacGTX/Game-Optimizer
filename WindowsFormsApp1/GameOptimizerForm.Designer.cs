@@ -65,6 +65,10 @@
             this.lblDlSpeed = new System.Windows.Forms.Label();
             this.lblRamUsage = new System.Windows.Forms.Label();
             this.nudAutRamFreeup = new System.Windows.Forms.NumericUpDown();
+            this.chkThresholdRAM = new System.Windows.Forms.CheckBox();
+            this.chckOverlayTstMode = new System.Windows.Forms.CheckBox();
+            this.chkHwSchMode = new System.Windows.Forms.CheckBox();
+            this.chkBcdTweaks = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.nudAutRamFreeup)).BeginInit();
             this.SuspendLayout();
@@ -95,7 +99,7 @@
             this.rdoHalfPhysical.AutoSize = true;
             this.rdoHalfPhysical.Location = new System.Drawing.Point(338, 92);
             this.rdoHalfPhysical.Name = "rdoHalfPhysical";
-            this.rdoHalfPhysical.Size = new System.Drawing.Size(133, 19);
+            this.rdoHalfPhysical.Size = new System.Drawing.Size(116, 17);
             this.rdoHalfPhysical.TabIndex = 2;
             this.rdoHalfPhysical.Text = "Half Physical Cores";
             this.rdoHalfPhysical.UseVisualStyleBackColor = true;
@@ -106,7 +110,7 @@
             this.rdoAuto.Checked = true;
             this.rdoAuto.Location = new System.Drawing.Point(338, 46);
             this.rdoAuto.Name = "rdoAuto";
-            this.rdoAuto.Size = new System.Drawing.Size(82, 19);
+            this.rdoAuto.Size = new System.Drawing.Size(72, 17);
             this.rdoAuto.TabIndex = 3;
             this.rdoAuto.TabStop = true;
             this.rdoAuto.Text = "Automatic";
@@ -117,7 +121,7 @@
             this.rdoNoSMT.AutoSize = true;
             this.rdoNoSMT.Location = new System.Drawing.Point(338, 69);
             this.rdoNoSMT.Name = "rdoNoSMT";
-            this.rdoNoSMT.Size = new System.Drawing.Size(135, 19);
+            this.rdoNoSMT.Size = new System.Drawing.Size(118, 17);
             this.rdoNoSMT.TabIndex = 4;
             this.rdoNoSMT.Text = "Physical Cores Only";
             this.rdoNoSMT.UseVisualStyleBackColor = true;
@@ -144,7 +148,7 @@
             this.label1.AutoSize = true;
             this.label1.Location = new System.Drawing.Point(12, 114);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(150, 15);
+            this.label1.Size = new System.Drawing.Size(133, 13);
             this.label1.TabIndex = 7;
             this.label1.Text = "RAM Standby List cleared:";
             // 
@@ -153,7 +157,7 @@
             this.lblStandByRAM.AutoSize = true;
             this.lblStandByRAM.Location = new System.Drawing.Point(138, 114);
             this.lblStandByRAM.Name = "lblStandByRAM";
-            this.lblStandByRAM.Size = new System.Drawing.Size(11, 15);
+            this.lblStandByRAM.Size = new System.Drawing.Size(10, 13);
             this.lblStandByRAM.TabIndex = 8;
             this.lblStandByRAM.Text = "-";
             // 
@@ -168,7 +172,7 @@
             this.label2.AutoSize = true;
             this.label2.Location = new System.Drawing.Point(500, 12);
             this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(82, 15);
+            this.label2.Size = new System.Drawing.Size(70, 13);
             this.label2.TabIndex = 9;
             this.label2.Text = "Current Timer";
             // 
@@ -177,7 +181,7 @@
             this.lblrestmr.AutoSize = true;
             this.lblrestmr.Location = new System.Drawing.Point(576, 12);
             this.lblrestmr.Name = "lblrestmr";
-            this.lblrestmr.Size = new System.Drawing.Size(11, 15);
+            this.lblrestmr.Size = new System.Drawing.Size(10, 13);
             this.lblrestmr.TabIndex = 10;
             this.lblrestmr.Text = "-";
             // 
@@ -204,7 +208,7 @@
             this.chckbxNaggleAlgo.AutoSize = true;
             this.chckbxNaggleAlgo.Location = new System.Drawing.Point(501, 91);
             this.chckbxNaggleAlgo.Name = "chckbxNaggleAlgo";
-            this.chckbxNaggleAlgo.Size = new System.Drawing.Size(169, 19);
+            this.chckbxNaggleAlgo.Size = new System.Drawing.Size(144, 17);
             this.chckbxNaggleAlgo.TabIndex = 14;
             this.chckbxNaggleAlgo.Text = "Disable Naggle Algorithm";
             this.chckbxNaggleAlgo.UseVisualStyleBackColor = true;
@@ -215,7 +219,7 @@
             this.chckBoxGamePriority.AutoSize = true;
             this.chckBoxGamePriority.Location = new System.Drawing.Point(501, 110);
             this.chckBoxGamePriority.Name = "chckBoxGamePriority";
-            this.chckBoxGamePriority.Size = new System.Drawing.Size(213, 19);
+            this.chckBoxGamePriority.Size = new System.Drawing.Size(185, 17);
             this.chckBoxGamePriority.TabIndex = 15;
             this.chckBoxGamePriority.Text = "Increase Game Priority In Registry";
             this.chckBoxGamePriority.UseVisualStyleBackColor = true;
@@ -226,7 +230,7 @@
             this.chckbxTimerRes.AutoSize = true;
             this.chckbxTimerRes.Location = new System.Drawing.Point(501, 57);
             this.chckbxTimerRes.Name = "chckbxTimerRes";
-            this.chckbxTimerRes.Size = new System.Drawing.Size(204, 19);
+            this.chckbxTimerRes.Size = new System.Drawing.Size(177, 17);
             this.chckbxTimerRes.TabIndex = 16;
             this.chckbxTimerRes.Text = "Set Timer Resolution Every 15m";
             this.chckbxTimerRes.UseVisualStyleBackColor = true;
@@ -252,7 +256,7 @@
             this.chckboxPriority.AutoSize = true;
             this.chckboxPriority.Location = new System.Drawing.Point(30, 75);
             this.chckboxPriority.Name = "chckboxPriority";
-            this.chckboxPriority.Size = new System.Drawing.Size(175, 19);
+            this.chckboxPriority.Size = new System.Drawing.Size(153, 17);
             this.chckboxPriority.TabIndex = 18;
             this.chckboxPriority.Text = "Set Priority every 5 minutes";
             this.chckboxPriority.UseVisualStyleBackColor = true;
@@ -301,7 +305,7 @@
             this.enableClnStandby.CheckState = System.Windows.Forms.CheckState.Checked;
             this.enableClnStandby.Location = new System.Drawing.Point(15, 130);
             this.enableClnStandby.Name = "enableClnStandby";
-            this.enableClnStandby.Size = new System.Drawing.Size(250, 19);
+            this.enableClnStandby.Size = new System.Drawing.Size(218, 17);
             this.enableClnStandby.TabIndex = 22;
             this.enableClnStandby.Text = "Enable automatic RAM StandBy clearing";
             this.enableClnStandby.UseVisualStyleBackColor = true;
@@ -356,7 +360,7 @@
             this.lblInternet.AutoSize = true;
             this.lblInternet.Location = new System.Drawing.Point(508, 167);
             this.lblInternet.Name = "lblInternet";
-            this.lblInternet.Size = new System.Drawing.Size(11, 15);
+            this.lblInternet.Size = new System.Drawing.Size(10, 13);
             this.lblInternet.TabIndex = 26;
             this.lblInternet.Text = "-";
             // 
@@ -365,7 +369,7 @@
             this.lblDlSpeed.AutoSize = true;
             this.lblDlSpeed.Location = new System.Drawing.Point(508, 195);
             this.lblDlSpeed.Name = "lblDlSpeed";
-            this.lblDlSpeed.Size = new System.Drawing.Size(11, 15);
+            this.lblDlSpeed.Size = new System.Drawing.Size(10, 13);
             this.lblDlSpeed.TabIndex = 27;
             this.lblDlSpeed.Text = "-";
             // 
@@ -375,14 +379,14 @@
             this.lblRamUsage.Location = new System.Drawing.Point(123, 198);
             this.lblRamUsage.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.lblRamUsage.Name = "lblRamUsage";
-            this.lblRamUsage.Size = new System.Drawing.Size(11, 15);
+            this.lblRamUsage.Size = new System.Drawing.Size(10, 13);
             this.lblRamUsage.TabIndex = 28;
             this.lblRamUsage.Text = "-";
             // 
             // nudAutRamFreeup
             // 
-            this.nudAutRamFreeup.Location = new System.Drawing.Point(30, 193);
-            this.nudAutRamFreeup.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.nudAutRamFreeup.Location = new System.Drawing.Point(400, 130);
+            this.nudAutRamFreeup.Margin = new System.Windows.Forms.Padding(2);
             this.nudAutRamFreeup.Maximum = new decimal(new int[] {
             100000,
             0,
@@ -391,12 +395,65 @@
             this.nudAutRamFreeup.Name = "nudAutRamFreeup";
             this.nudAutRamFreeup.Size = new System.Drawing.Size(75, 20);
             this.nudAutRamFreeup.TabIndex = 29;
+            this.nudAutRamFreeup.Value = new decimal(new int[] {
+            16384,
+            0,
+            0,
+            0});
+            // 
+            // chkThresholdRAM
+            // 
+            this.chkThresholdRAM.AutoSize = true;
+            this.chkThresholdRAM.Location = new System.Drawing.Point(270, 130);
+            this.chkThresholdRAM.Name = "chkThresholdRAM";
+            this.chkThresholdRAM.Size = new System.Drawing.Size(106, 17);
+            this.chkThresholdRAM.TabIndex = 30;
+            this.chkThresholdRAM.Text = "Threshold Based";
+            this.chkThresholdRAM.UseVisualStyleBackColor = true;
+            this.chkThresholdRAM.CheckedChanged += new System.EventHandler(this.chkThresholdRAM_CheckedChanged);
+            // 
+            // chckOverlayTstMode
+            // 
+            this.chckOverlayTstMode.AutoSize = true;
+            this.chckOverlayTstMode.Location = new System.Drawing.Point(13, 195);
+            this.chckOverlayTstMode.Name = "chckOverlayTstMode";
+            this.chckOverlayTstMode.Size = new System.Drawing.Size(93, 17);
+            this.chckOverlayTstMode.TabIndex = 31;
+            this.chckOverlayTstMode.Text = "DWM Overlay";
+            this.chckOverlayTstMode.UseVisualStyleBackColor = true;
+            this.chckOverlayTstMode.CheckedChanged += new System.EventHandler(this.chckOverlayTstMode_CheckedChanged);
+            // 
+            // chkHwSchMode
+            // 
+            this.chkHwSchMode.AutoSize = true;
+            this.chkHwSchMode.Location = new System.Drawing.Point(112, 194);
+            this.chkHwSchMode.Name = "chkHwSchMode";
+            this.chkHwSchMode.Size = new System.Drawing.Size(214, 17);
+            this.chkHwSchMode.TabIndex = 32;
+            this.chkHwSchMode.Text = "Hardware Accelerated GPU Scheduling";
+            this.chkHwSchMode.UseVisualStyleBackColor = true;
+            this.chkHwSchMode.CheckedChanged += new System.EventHandler(this.chkHwSchMode_CheckedChanged);
+            // 
+            // chkBcdTweaks
+            // 
+            this.chkBcdTweaks.AutoSize = true;
+            this.chkBcdTweaks.Location = new System.Drawing.Point(345, 160);
+            this.chkBcdTweaks.Name = "chkBcdTweaks";
+            this.chkBcdTweaks.Size = new System.Drawing.Size(136, 17);
+            this.chkBcdTweaks.TabIndex = 33;
+            this.chkBcdTweaks.Text = "System Timer Tweaks  ";
+            this.chkBcdTweaks.UseVisualStyleBackColor = true;
+            this.chkBcdTweaks.CheckedChanged += new System.EventHandler(this.chkBcdTweaks_CheckedChanged);
             // 
             // GameOptimizerForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(689, 219);
+            this.Controls.Add(this.chkBcdTweaks);
+            this.Controls.Add(this.chkHwSchMode);
+            this.Controls.Add(this.chckOverlayTstMode);
+            this.Controls.Add(this.chkThresholdRAM);
             this.Controls.Add(this.nudAutRamFreeup);
             this.Controls.Add(this.lblRamUsage);
             this.Controls.Add(this.lblDlSpeed);
@@ -473,6 +530,10 @@
         private System.Windows.Forms.Label lblDlSpeed;
         private System.Windows.Forms.Label lblRamUsage;
         private System.Windows.Forms.NumericUpDown nudAutRamFreeup;
+        private System.Windows.Forms.CheckBox chkThresholdRAM;
+        private System.Windows.Forms.CheckBox chckOverlayTstMode;
+        private System.Windows.Forms.CheckBox chkHwSchMode;
+        private System.Windows.Forms.CheckBox chkBcdTweaks;
     }
 }
 

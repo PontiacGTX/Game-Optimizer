@@ -111,6 +111,13 @@ namespace GameOptimizer
             public static readonly Int32 CoreOneToFour = 0x000F;
             public static readonly Int32 CoreOneToSix = 0x003F;
             public static readonly Int32 CoreOneToEight = 0x00FF;
+
+            // New masks for 24-core CPUs
+            public static readonly Int64 TwentyFourCoreSmt = 0xFFFFFFFF;
+            public static readonly Int64 TwentyFourCoreSmtNoSMT = 0xFFFF5555; // 13900HX: 8 physical P-cores + 16 E-cores
+            public static readonly Int64 TwentyFourCoreSmtHalfPhysical = 0x000F5555; // 13900HX: 8 physical P + 4 E = 12 physical
+            public static readonly Int64 TwentyFourCoreNoSmt = 0x00FFFFFF; // 275HX: 24 physical cores (no SMT)
+            public static readonly Int64 TwentyFourCoreNoSmtHalfPhysical = 0x00000FFF; // 275HX: 12 physical cores
         }
         public class ProcessList
         {
@@ -168,6 +175,7 @@ namespace GameOptimizer
             GetCurrentTimerResolution();
             StopServicesAndProcess();
             EmptyWorkingSet();
+            InitializeRegistryCheckboxes();
             StartUpCheck();
         }
         const int SE_PRIVILEGE_ENABLED = 2;
@@ -611,6 +619,17 @@ namespace GameOptimizer
             {
                 this.cmbxAffinityCount.Items.Clear();
             }
+
+            if (Cores == 24 && ThreadCount == 32)
+            {
+                if (!this.cmbxAffinityCount.Items.Contains("24c/32t"))
+                    this.cmbxAffinityCount.Items.Add("24c/32t");
+            }
+            if (Cores == 24 && ThreadCount == 24)
+            {
+                if (!this.cmbxAffinityCount.Items.Contains("24c/24t"))
+                    this.cmbxAffinityCount.Items.Add("24c/24t");
+            }
         }
         async Task StartUpCheck()
         {
@@ -702,6 +721,34 @@ namespace GameOptimizer
                         }
                         GameProcess.ProcessorAffinity = (IntPtr)SelectedCoreCount.OctoCoreSMT;
                     }
+                    if (Cores == 24 && ThreadCount == 32)
+                    {
+                        for (int i = 0; i < GameProcess.Threads.Count; i++)
+                        {
+                            try
+                            {
+                                GameProcess.Threads[i].ProcessorAffinity = (IntPtr)SelectedCoreCount.TwentyFourCoreSmt;
+                            }
+                            catch (Exception ex)
+                            {
+                            }
+                        }
+                        GameProcess.ProcessorAffinity = (IntPtr)SelectedCoreCount.TwentyFourCoreSmt;
+                    }
+                    if (Cores == 24 && ThreadCount == 24)
+                    {
+                        for (int i = 0; i < GameProcess.Threads.Count; i++)
+                        {
+                            try
+                            {
+                                GameProcess.Threads[i].ProcessorAffinity = (IntPtr)SelectedCoreCount.TwentyFourCoreNoSmt;
+                            }
+                            catch (Exception ex)
+                            {
+                            }
+                        }
+                        GameProcess.ProcessorAffinity = (IntPtr)SelectedCoreCount.TwentyFourCoreNoSmt;
+                    }
 
                     GameProcess.Refresh();
                 }
@@ -750,6 +797,34 @@ namespace GameOptimizer
                         }
                         GameProcess.ProcessorAffinity = (IntPtr)SelectedCoreCount.OctaCoreNoSMT;
                     }
+                    if (Cores == 24 && ThreadCount == 32)
+                    {
+                        for (int i = 0; i < GameProcess.Threads.Count; i++)
+                        {
+                            try
+                            {
+                                GameProcess.Threads[i].ProcessorAffinity = (IntPtr)SelectedCoreCount.TwentyFourCoreSmtNoSMT;
+                            }
+                            catch (Exception ex)
+                            {
+                            }
+                        }
+                        GameProcess.ProcessorAffinity = (IntPtr)SelectedCoreCount.TwentyFourCoreSmtNoSMT;
+                    }
+                    if (Cores == 24 && ThreadCount == 24)
+                    {
+                        for (int i = 0; i < GameProcess.Threads.Count; i++)
+                        {
+                            try
+                            {
+                                GameProcess.Threads[i].ProcessorAffinity = (IntPtr)SelectedCoreCount.TwentyFourCoreNoSmt;
+                            }
+                            catch (Exception ex)
+                            {
+                            }
+                        }
+                        GameProcess.ProcessorAffinity = (IntPtr)SelectedCoreCount.TwentyFourCoreNoSmt;
+                    }
                     GameProcess.Refresh();
                 }
                 if (rdoHalfPhysical.Checked)
@@ -797,6 +872,34 @@ namespace GameOptimizer
                             }
                         }
                         GameProcess.ProcessorAffinity = (IntPtr)SelectedCoreCount.QuadCoreNoSMT;
+                    }
+                    if (Cores == 24 && ThreadCount == 32)
+                    {
+                        for (int i = 0; i < GameProcess.Threads.Count; i++)
+                        {
+                            try
+                            {
+                                GameProcess.Threads[i].ProcessorAffinity = (IntPtr)SelectedCoreCount.TwentyFourCoreSmtHalfPhysical;
+                            }
+                            catch (Exception ex)
+                            {
+                            }
+                        }
+                        GameProcess.ProcessorAffinity = (IntPtr)SelectedCoreCount.TwentyFourCoreSmtHalfPhysical;
+                    }
+                    if (Cores == 24 && ThreadCount == 24)
+                    {
+                        for (int i = 0; i < GameProcess.Threads.Count; i++)
+                        {
+                            try
+                            {
+                                GameProcess.Threads[i].ProcessorAffinity = (IntPtr)SelectedCoreCount.TwentyFourCoreNoSmtHalfPhysical;
+                            }
+                            catch (Exception ex)
+                            {
+                            }
+                        }
+                        GameProcess.ProcessorAffinity = (IntPtr)SelectedCoreCount.TwentyFourCoreNoSmtHalfPhysical;
                     }
                     GameProcess.Refresh();
                 }
@@ -848,6 +951,34 @@ namespace GameOptimizer
                         }
                         GameProcess.ProcessorAffinity = (IntPtr)SelectedCoreCount.OctoCoreSMT;
                     }
+                    if (Cores == 24 && ThreadCount == 32)
+                    {
+                        for (int i = 0; i < GameProcess.Threads.Count; i++)
+                        {
+                            try
+                            {
+                                GameProcess.Threads[i].ProcessorAffinity = (IntPtr)SelectedCoreCount.TwentyFourCoreSmt;
+                            }
+                            catch (Exception ex)
+                            {
+                            }
+                        }
+                        GameProcess.ProcessorAffinity = (IntPtr)SelectedCoreCount.TwentyFourCoreSmt;
+                    }
+                    if (Cores == 24 && ThreadCount == 24)
+                    {
+                        for (int i = 0; i < GameProcess.Threads.Count; i++)
+                        {
+                            try
+                            {
+                                GameProcess.Threads[i].ProcessorAffinity = (IntPtr)SelectedCoreCount.TwentyFourCoreNoSmt;
+                            }
+                            catch (Exception ex)
+                            {
+                            }
+                        }
+                        GameProcess.ProcessorAffinity = (IntPtr)SelectedCoreCount.TwentyFourCoreNoSmt;
+                    }
 
                     GameProcess.Refresh();
                 }
@@ -897,6 +1028,34 @@ namespace GameOptimizer
 
                         GameProcess.ProcessorAffinity = (IntPtr)SelectedCoreCount.OctaCoreNoSMT;
                     }
+                    if (Cores == 24 && ThreadCount == 32)
+                    {
+                        for (int i = 0; i < GameProcess.Threads.Count; i++)
+                        {
+                            try
+                            {
+                                GameProcess.Threads[i].ProcessorAffinity = (IntPtr)SelectedCoreCount.TwentyFourCoreSmtNoSMT;
+                            }
+                            catch (Exception ex)
+                            {
+                            }
+                        }
+                        GameProcess.ProcessorAffinity = (IntPtr)SelectedCoreCount.TwentyFourCoreSmtNoSMT;
+                    }
+                    if (Cores == 24 && ThreadCount == 24)
+                    {
+                        for (int i = 0; i < GameProcess.Threads.Count; i++)
+                        {
+                            try
+                            {
+                                GameProcess.Threads[i].ProcessorAffinity = (IntPtr)SelectedCoreCount.TwentyFourCoreNoSmt;
+                            }
+                            catch (Exception ex)
+                            {
+                            }
+                        }
+                        GameProcess.ProcessorAffinity = (IntPtr)SelectedCoreCount.TwentyFourCoreNoSmt;
+                    }
                     GameProcess.Refresh();
                 }
                 if (rdoHalfPhysical.Checked)
@@ -943,6 +1102,34 @@ namespace GameOptimizer
                         }
                         GameProcess.ProcessorAffinity = (IntPtr)SelectedCoreCount.QuadCoreNoSMT;
                     }
+                    if (Cores == 24 && ThreadCount == 32)
+                    {
+                        for (int i = 0; i < GameProcess.Threads.Count; i++)
+                        {
+                            try
+                            {
+                                GameProcess.Threads[i].ProcessorAffinity = (IntPtr)SelectedCoreCount.TwentyFourCoreSmtHalfPhysical;
+                            }
+                            catch (Exception ex)
+                            {
+                            }
+                        }
+                        GameProcess.ProcessorAffinity = (IntPtr)SelectedCoreCount.TwentyFourCoreSmtHalfPhysical;
+                    }
+                    if (Cores == 24 && ThreadCount == 24)
+                    {
+                        for (int i = 0; i < GameProcess.Threads.Count; i++)
+                        {
+                            try
+                            {
+                                GameProcess.Threads[i].ProcessorAffinity = (IntPtr)SelectedCoreCount.TwentyFourCoreNoSmtHalfPhysical;
+                            }
+                            catch (Exception ex)
+                            {
+                            }
+                        }
+                        GameProcess.ProcessorAffinity = (IntPtr)SelectedCoreCount.TwentyFourCoreNoSmtHalfPhysical;
+                    }
                     GameProcess.Refresh();
                 }
 
@@ -963,6 +1150,10 @@ namespace GameOptimizer
                         process.ProcessorAffinity = (IntPtr)SelectedCoreCount.HexaCoreSMT;
                     if (Cores == 8 && ThreadCount == 16)
                         process.ProcessorAffinity = (IntPtr)SelectedCoreCount.OctoCoreSMT;
+                    if (Cores == 24 && ThreadCount == 32)
+                        process.ProcessorAffinity = (IntPtr)SelectedCoreCount.TwentyFourCoreSmt;
+                    if (Cores == 24 && ThreadCount == 24)
+                        process.ProcessorAffinity = (IntPtr)SelectedCoreCount.TwentyFourCoreNoSmt;
 
                     process.Refresh();
                 }
@@ -974,6 +1165,10 @@ namespace GameOptimizer
                         process.ProcessorAffinity = (IntPtr)SelectedCoreCount.HexaCoreNoSMT;
                     if (Cores == 8 && ThreadCount == 16)
                         process.ProcessorAffinity = (IntPtr)SelectedCoreCount.OctaCoreNoSMT;
+                    if (Cores == 24 && ThreadCount == 32)
+                        process.ProcessorAffinity = (IntPtr)SelectedCoreCount.TwentyFourCoreSmtNoSMT;
+                    if (Cores == 24 && ThreadCount == 24)
+                        process.ProcessorAffinity = (IntPtr)SelectedCoreCount.TwentyFourCoreNoSmt;
 
                     process.Refresh();
                 }
@@ -985,6 +1180,10 @@ namespace GameOptimizer
                         process.ProcessorAffinity = (IntPtr)SelectedCoreCount.TripleCore;
                     if (Cores == 8 && ThreadCount == 16)
                         process.ProcessorAffinity = (IntPtr)SelectedCoreCount.QuadCoreNoSMT;
+                    if (Cores == 24 && ThreadCount == 32)
+                        process.ProcessorAffinity = (IntPtr)SelectedCoreCount.TwentyFourCoreSmtHalfPhysical;
+                    if (Cores == 24 && ThreadCount == 24)
+                        process.ProcessorAffinity = (IntPtr)SelectedCoreCount.TwentyFourCoreNoSmtHalfPhysical;
 
                     process.Refresh();
                 }
@@ -1172,9 +1371,20 @@ namespace GameOptimizer
         {
             if (enableClnStandby.Checked)
             {
-                ClearFileSystemCache(true);
-                ClearStandByList();
-
+                if (chkThresholdRAM.Checked)
+                {
+                    if (GetCurrentMemoryUsage() > (float)nudAutRamFreeup.Value)
+                    {
+                        ClearFileSystemCache(true);
+                        ClearStandByList();
+                        EmptyWorkingSet();
+                    }
+                }
+                else
+                {
+                    ClearFileSystemCache(true);
+                    ClearStandByList();
+                }
             }
 
             
@@ -1439,15 +1649,33 @@ namespace GameOptimizer
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void checkBox1_CheckedChanged(object sender, EventArgs e)
         {
-            if (!tmrRam.Enabled && enableClnStandby.Checked)
+            if (enableClnStandby.Checked)
             {
-                tmrRam.Enabled = true;
-                tmrRam.Start();
+                if (!tmrRam.Enabled)
+                {
+                    tmrRam.Enabled = true;
+                    tmrRam.Start();
+                }
                 ClearStandByList();
             }
             else
             {
-                enableClnStandby.Checked = false;
+                tmrRam.Enabled = false;
+                tmrRam.Stop();
+            }
+        }
+
+        private void chkThresholdRAM_CheckedChanged(object sender, EventArgs e)
+        {
+            if (chkThresholdRAM.Checked)
+            {
+                // Check every 30 seconds if threshold is enabled
+                tmrRam.Interval = 30000;
+            }
+            else
+            {
+                // Return to 15 minutes if only automatic clearing is enabled
+                tmrRam.Interval = 900000;
             }
         }
 
@@ -1738,5 +1966,179 @@ namespace GameOptimizer
             this.WindowState = FormWindowState.Normal;
             notifyIcon1.Visible = false;
         }
+
+        private void chckOverlayTstMode_CheckedChanged(object sender, EventArgs e)
+        {
+            if (Environment.OSVersion.Version.Major >= 10)
+            {
+                try
+                {
+                    using (RegistryKey key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\Dwm", true))
+                    {
+                        if (key != null)
+                        {
+                            if (chckOverlayTstMode.Checked)
+                            {
+                                key.SetValue("OverlayTestMode", 5, RegistryValueKind.DWord);
+                            }
+                            else
+                            {
+                                // Set to 0 or delete to disable. Let's set it to 0 as it's safer.
+                                key.SetValue("OverlayTestMode", 0, RegistryValueKind.DWord);
+                            }
+                        }
+                    }
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    MessageBox.Show("Administrator privileges are required to modify this registry key.", "Access Denied", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    chckOverlayTstMode.Checked = !chckOverlayTstMode.Checked; // Revert change
+                }
+                catch (Exception ex)
+                {
+                  MessageBox.Show("An error occurred while modifying the registry: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+        }
+        private void chkHwSchMode_CheckedChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                using (RegistryKey key = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\GraphicsDrivers", true))
+                {
+                    if (key != null)
+                    {
+                        if (chkHwSchMode.Checked)
+                        {
+                            key.SetValue("HwSchMode", 2, RegistryValueKind.DWord);
+                        }
+                        else
+                        {
+                            key.SetValue("HwSchMode", 1, RegistryValueKind.DWord);
+                        }
+                    }
+                }
+            }
+            catch (UnauthorizedAccessException)
+            {
+                MessageBox.Show("Administrator privileges are required to modify GPU scheduling settings.", "Access Denied", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                chkHwSchMode.Checked = !chkHwSchMode.Checked; // Revert change
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("An error occurred while modifying the registry: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void chkBcdTweaks_CheckedChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                if (chkBcdTweaks.Checked)
+                {
+                    RunBcdCommand("/set disabledynamictick yes");
+                    RunBcdCommand("/set useplatformtick yes");
+                    RunBcdCommand("/set tscsyncpolicy Enhanced");
+                }
+                else
+                {
+                    RunBcdCommand("/deletevalue disabledynamictick");
+                    RunBcdCommand("/deletevalue useplatformtick");
+                    RunBcdCommand("/deletevalue tscsyncpolicy");
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error applying BCD tweaks: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void RunBcdCommand(string arguments)
+        {
+            ProcessStartInfo psi = new ProcessStartInfo("bcdedit", arguments)
+            {
+                Verb = "runas",
+                CreateNoWindow = true,
+                UseShellExecute = true,
+                WindowStyle = ProcessWindowStyle.Hidden
+            };
+            try
+            {
+                Process.Start(psi).WaitForExit();
+            }
+            catch { }
+        }
+        
+        private void InitializeRegistryCheckboxes()
+        {
+            // Temporarily remove event handlers to avoid triggering them during initialization
+            this.chckOverlayTstMode.CheckedChanged -= new System.EventHandler(this.chckOverlayTstMode_CheckedChanged);
+            this.chkHwSchMode.CheckedChanged -= new System.EventHandler(this.chkHwSchMode_CheckedChanged);
+            this.chkBcdTweaks.CheckedChanged -= new System.EventHandler(this.chkBcdTweaks_CheckedChanged);
+
+            // Initialize OverlayTestMode CheckBox
+            if (Environment.OSVersion.Version.Major >= 10)
+            {
+                try
+                {
+                    using (RegistryKey key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\Dwm"))
+                    {
+                        if (key != null)
+                        {
+                            var value = key.GetValue("OverlayTestMode");
+                            if (value != null && value is int intValue && intValue == 5)
+                                chckOverlayTstMode.Checked = true;
+                            else
+                                chckOverlayTstMode.Checked = false;
+                        }
+                    }
+                }
+                catch { }
+            }
+
+            // Initialize Hardware GPU Scheduling CheckBox
+            try
+            {
+                using (RegistryKey key = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\GraphicsDrivers"))
+                {
+                    if (key != null)
+                    {
+                        var value = key.GetValue("HwSchMode");
+                        if (value != null && value is int intValue && intValue == 2)
+                            chkHwSchMode.Checked = true;
+                        else
+                            chkHwSchMode.Checked = false;
+                    }
+                }
+            }
+            catch { }
+
+            // Initialize BCD Tweaks CheckBox (Simple check by running bcdedit and checking output)
+            try
+            {
+                ProcessStartInfo psi = new ProcessStartInfo("bcdedit", "/enum {current}")
+                {
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+                using (Process p = Process.Start(psi))
+                {
+                    string output = p.StandardOutput.ReadToEnd();
+                    if (output.Contains("disabledynamictick    Yes") && output.Contains("useplatformtick       Yes"))
+                    {
+                        chkBcdTweaks.Checked = true;
+                    }
+                }
+            }
+            catch { }
+
+            // Re-hook event handlers
+            this.chckOverlayTstMode.CheckedChanged += new System.EventHandler(this.chckOverlayTstMode_CheckedChanged);
+            this.chkHwSchMode.CheckedChanged += new System.EventHandler(this.chkHwSchMode_CheckedChanged);
+            this.chkBcdTweaks.CheckedChanged += new System.EventHandler(this.chkBcdTweaks_CheckedChanged);
+        }
+
+       
     }
 }
