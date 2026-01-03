@@ -177,7 +177,25 @@ namespace GameOptimizer
             EmptyWorkingSet();
             InitializeRegistryCheckboxes();
             StartUpCheck();
+            InitializeTimer();
+            SetTimerTimeSpan();
         }
+
+        private void SetTimerTimeSpan()
+        {
+            cmbTimeSpanTimer.Items.Add("5 minutes");
+            cmbTimeSpanTimer.Items.Add("10 minutes");
+            cmbTimeSpanTimer.Items.Add("15 minutes");
+            cmbTimeSpanTimer.Items.Add("20 minutes");
+        }
+
+        private void InitializeTimer()
+        {
+            tmrRam.Interval = 900000;
+            tmrRam.Enabled = true;
+            tmrRam.Start();
+        }
+
         const int SE_PRIVILEGE_ENABLED = 2;
         const string SE_INCREASE_QUOTA_NAME = "SeIncreaseQuotaPrivilege";
         const string SE_PROFILE_SINGLE_PROCESS_NAME = "SeProfileSingleProcessPrivilege";
@@ -1189,8 +1207,7 @@ namespace GameOptimizer
                 }
 
 
-            }
-            GameProcessList.Clear();
+            } 
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -2139,6 +2156,27 @@ namespace GameOptimizer
             this.chkBcdTweaks.CheckedChanged += new System.EventHandler(this.chkBcdTweaks_CheckedChanged);
         }
 
-       
+        private void cmbTimeSpanTimer_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            switch (cmbTimeSpanTimer.SelectedItem.ToString())
+            {
+               
+                case "5 minutes":
+                    tmrRam.Interval = 300_000;
+                    break;
+                case "10 minutes":
+                    tmrRam.Interval = 600_000;
+                    break;
+                case "15 minutes":
+                    tmrRam.Interval = 900_000;
+                    break;
+                case "20 minutes":
+                    tmrRam.Interval = 1200_000;
+                    break;
+                default:
+                    tmrRam.Interval = 900_000;
+                    break;
+            }
+        }
     }
 }

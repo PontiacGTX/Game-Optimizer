@@ -69,6 +69,7 @@
             this.chckOverlayTstMode = new System.Windows.Forms.CheckBox();
             this.chkHwSchMode = new System.Windows.Forms.CheckBox();
             this.chkBcdTweaks = new System.Windows.Forms.CheckBox();
+            this.cmbTimeSpanTimer = new System.Windows.Forms.ComboBox();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.nudAutRamFreeup)).BeginInit();
             this.SuspendLayout();
@@ -445,11 +446,21 @@
             this.chkBcdTweaks.UseVisualStyleBackColor = true;
             this.chkBcdTweaks.CheckedChanged += new System.EventHandler(this.chkBcdTweaks_CheckedChanged);
             // 
+            // cmbTimeSpanTimer
+            // 
+            this.cmbTimeSpanTimer.FormattingEnabled = true;
+            this.cmbTimeSpanTimer.Location = new System.Drawing.Point(155, 105);
+            this.cmbTimeSpanTimer.Name = "cmbTimeSpanTimer";
+            this.cmbTimeSpanTimer.Size = new System.Drawing.Size(88, 21);
+            this.cmbTimeSpanTimer.TabIndex = 34;
+            this.cmbTimeSpanTimer.SelectedIndexChanged += new System.EventHandler(this.cmbTimeSpanTimer_SelectedIndexChanged);
+            // 
             // GameOptimizerForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(689, 219);
+            this.Controls.Add(this.cmbTimeSpanTimer);
             this.Controls.Add(this.chkBcdTweaks);
             this.Controls.Add(this.chkHwSchMode);
             this.Controls.Add(this.chckOverlayTstMode);
@@ -534,6 +545,7 @@
         private System.Windows.Forms.CheckBox chckOverlayTstMode;
         private System.Windows.Forms.CheckBox chkHwSchMode;
         private System.Windows.Forms.CheckBox chkBcdTweaks;
+        private System.Windows.Forms.ComboBox cmbTimeSpanTimer;
     }
 }
 
