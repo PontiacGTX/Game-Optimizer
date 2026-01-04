@@ -509,14 +509,15 @@ namespace GameOptimizer
         public void GetCurrentTimerResolution()
         {
             NtQueryTimerResolution(out this.MaximumResolution, out this.MininumResolution, out this.DefaultResolution);
-            float DefaultResolution = (float)((float)this.DefaultResolution) / 10000f;
-            float defaultResolution = (float)((float)this.DefaultResolution) / 10000f;
-            lblrestmr.Text = string.Concat(DefaultResolution.ToString(), "ms");
-            MaximumTimerResolution = (float)((float)this.MaximumResolution) / 10000f;
-            defaultResolution = (float)((float)this.MaximumResolution) / 10000f;
-            MinimumTimerResolution = (float)((float)this.MininumResolution) / 10000f;
-            defaultResolution = (float)((float)this.MininumResolution) / 10000f;
-            textBox2.Text = DefaultResolution.ToString(CultureInfo.InvariantCulture);
+            //float DefaultResolution = (float)((float)this.DefaultResolution) / 10000f;
+            //float defaultResolution = (float)((float)this.DefaultResolution) / 10000f;
+            //lblrestmr.Text = string.Concat(DefaultResolution.ToString(), "ms");
+            //MaximumTimerResolution = (float)((float)this.MaximumResolution) / 10000f;
+            //defaultResolution = (float)((float)this.MaximumResolution) / 10000f;
+            //MinimumTimerResolution = (float)((float)this.MininumResolution) / 10000f;
+            //defaultResolution = (float)((float)this.MininumResolution) / 10000f;
+            lblrestmr.Text = textBox2.Text = (DefaultResolution/10000).ToString(CultureInfo.InvariantCulture);
+            lblrestmr.Text += "ms";
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
