@@ -70,6 +70,42 @@ namespace GameOptimizer
 
         [DllImport("ntdll.dll", CharSet = CharSet.None, ExactSpelling = false, SetLastError = true)]
         private static extern int NtSetTimerResolution(uint DesiredResolution, bool SetResolution, out uint CurrentResolution);
+
+        [DllImport("powrprof.dll")]
+        static extern uint PowerGetActiveScheme(IntPtr UserRootPowerKey, out IntPtr ActivePolicyGuid);
+
+        [DllImport("powrprof.dll", CharSet = CharSet.Unicode)]
+        static extern uint PowerReadFriendlyName(IntPtr RootPowerKey, ref Guid SchemeGuid, IntPtr SubGroupOfPowerSettingsGuid, IntPtr PowerSettingGuid, IntPtr Buffer, ref uint BufferSize);
+
+        [DllImport("powrprof.dll")]
+        static extern uint PowerReadACValueIndex(IntPtr RootPowerKey, ref Guid SchemeGuid, ref Guid SubGroupOfPowerSettingsGuid, ref Guid PowerSettingGuid, out uint AcValueIndex);
+
+        [DllImport("powrprof.dll")]
+        static extern int CallNtPowerInformation(int InformationLevel, IntPtr InputBuffer, int InputBufferLength, IntPtr OutputBuffer, int OutputBufferLength);
+
+        [DllImport("kernel32.dll")]
+        static extern IntPtr LocalFree(IntPtr hMem);
+
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct PROCESSOR_POWER_INFORMATION
+        {
+            public uint Number;
+            public uint MaxMhz;
+            public uint CurrentMhz;
+            public uint MhzLimit;
+            public uint MaxIdleState;
+            public uint CurrentIdleState;
+        }
+
+        private struct CpuPowerStats
+        {
+            public string Plan;
+            public string Profile;
+            public string Limits;
+            public string Current;
+        }
+
         Process[] ProcessArray;
 
         public List<ProcessList> ListItems { get; private set; }
@@ -141,6 +177,10 @@ namespace GameOptimizer
         List<Process> GameProcessList;
         static byte ThreadCount;
         static byte Cores;
+        private List<PerformanceCounter> corePerfCounters = new List<PerformanceCounter>();
+        private List<uint> coreBaseFrequencies = new List<uint>();
+        private bool countersInitialized = false;
+
         private uint DefaultResolution;
         private uint MininumResolution;
         private uint MaximumResolution;
@@ -654,25 +694,20 @@ namespace GameOptimizer
         {
             try
             {
-                status = IsInternetConnectionAvailable().Result;
-                secondaryTask = Task.FromResult(status.Status.Equals(IPStatus.Success));
+                var reply = await IsInternetConnectionAvailable();
+                status = reply;
+                isOnline = reply != null && reply.Status == IPStatus.Success;
+                secondaryTask = Task.FromResult(isOnline);
 
-                if (Adapter != null)
-                {
-                   
-                    mainTask = new Task(async () =>
-                    {
-                        await GetNetworkSpeed();
-                    });
-
-                    mainTask.Start();
-                }
+                _ = GetNetworkSpeed();
             }
             catch (Exception ex)
             {
                 failedInternetStartupCheck = true;
                 isOnline = false;
-                lblInternet.Text = "Sin Conexion";
+                this.BeginInvoke(new MethodInvoker(delegate {
+                    lblInternet.Text = "Sin Conexion";
+                }));
             }
         }
         async Task<PingReply> IsInternetConnectionAvailable()
@@ -684,7 +719,7 @@ namespace GameOptimizer
                 byte[] buffer = new byte[32];
                 int timeout = 1000;
                 PingOptions pingOptions = new PingOptions();
-                PingReply reply = myPing.Send(host, timeout, buffer, pingOptions);
+                PingReply reply = await myPing.SendPingAsync(host, timeout, buffer, pingOptions);
                 return reply;
             }
             catch (Exception)
@@ -1819,11 +1854,99 @@ namespace GameOptimizer
                 }
             }
         }
+
+        private CpuPowerStats FetchCpuPowerStats()
+        {
+            CpuPowerStats stats = new CpuPowerStats { Plan = "Power Plan: -", Profile = "CPU Profile: -", Limits = "CPU Limits: -", Current = "" };
+            try
+            {
+                IntPtr activeGuidPtr;
+                if (PowerGetActiveScheme(IntPtr.Zero, out activeGuidPtr) == 0)
+                {
+                    Guid activeGuid = Marshal.PtrToStructure<Guid>(activeGuidPtr);
+                    uint bufferSize = 256;
+                    IntPtr nameBuffer = Marshal.AllocHGlobal((int)bufferSize);
+                    if (PowerReadFriendlyName(IntPtr.Zero, ref activeGuid, IntPtr.Zero, IntPtr.Zero, nameBuffer, ref bufferSize) == 0)
+                    {
+                        string name = Marshal.PtrToStringUni(nameBuffer);
+                        stats.Plan = $"Power Plan: {name}";
+                        if (name.IndexOf("High", StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf("Ultimate", StringComparison.OrdinalIgnoreCase) >= 0)
+                            stats.Profile = "CPU Profile: Performance";
+                        else if (name.IndexOf("Saver", StringComparison.OrdinalIgnoreCase) >= 0)
+                            stats.Profile = "CPU Profile: Efficiency";
+                        else
+                            stats.Profile = "CPU Profile: Balanced";
+                    }
+                    Marshal.FreeHGlobal(nameBuffer);
+
+                    // Processor limits (Min/Max state)
+                    Guid processorSubgroup = new Guid("54533251-82be-4824-96c1-47b60b740d00");
+                    Guid minStateSetting = new Guid("893df054-4844-4340-a451-34fc2c244836");
+                    Guid maxStateSetting = new Guid("bc5038f7-23e0-4960-96da-33abaf5935ec");
+
+                    uint minState, maxState;
+                    PowerReadACValueIndex(IntPtr.Zero, ref activeGuid, ref processorSubgroup, ref minStateSetting, out minState);
+                    PowerReadACValueIndex(IntPtr.Zero, ref activeGuid, ref processorSubgroup, ref maxStateSetting, out maxState);
+                    stats.Limits = $"CPU Limits: {minState}% / {maxState}%";
+
+                    LocalFree(activeGuidPtr);
+                }
+
+                // Initializing Base Frequencies and Counters
+                int count = Environment.ProcessorCount;
+                if (!countersInitialized || coreBaseFrequencies.Count != count)
+                {
+                    coreBaseFrequencies.Clear();
+                    corePerfCounters.Clear();
+                    int size = Marshal.SizeOf<PROCESSOR_POWER_INFORMATION>();
+                    IntPtr buffer = Marshal.AllocHGlobal(size * count);
+                    if (CallNtPowerInformation(11, IntPtr.Zero, 0, buffer, size * count) == 0)
+                    {
+                        var category = new PerformanceCounterCategory("Processor Information");
+                        string[] instances = category.GetInstanceNames().Where(x => x.Contains(",") && !x.Contains("_Total")).OrderBy(x => x).ToArray();
+                        
+                        for (int i = 0; i < count; i++)
+                        {
+                            var nfo = Marshal.PtrToStructure<PROCESSOR_POWER_INFORMATION>(buffer + (i * size));
+                            coreBaseFrequencies.Add(nfo.MaxMhz); // This is the 2200 base
+                            
+                            // Get the performance percentage counter for this core
+                            string instanceName = i < instances.Length ? instances[i] : $"0,{i}";
+                            corePerfCounters.Add(new PerformanceCounter("Processor Information", "% Processor Performance", instanceName));
+                        }
+                    }
+                    Marshal.FreeHGlobal(buffer);
+                    countersInitialized = corePerfCounters.Count > 0;
+                }
+
+                if (countersInitialized)
+                {
+                    StringBuilder sb = new StringBuilder();
+                    for (int i = 0; i < corePerfCounters.Count; i++)
+                    {
+                        try
+                        {
+                            // Actual = (Base * Percentage) / 100
+                            float perfPercent = corePerfCounters[i].NextValue();
+                            int actualMhz = (int)((coreBaseFrequencies[i] * perfPercent) / 100);
+                            
+                            // Group into 2 columns for the UI to save space
+                            sb.Append($"C{i}: {actualMhz}MHz ");
+                            if (i % 2 != 0) sb.Append("\n");
+                        }
+                        catch { }
+                    }
+                    stats.Current = sb.ToString();
+                }
+            }
+            catch { }
+            return stats;
+        }
         async Task GetNetworkSpeed()
         {
             IEnumerable<Double> reads = new List<double>();
             var sw = new Stopwatch();
-            var lastBr = Adapter.GetIPv4Statistics().BytesReceived;
+            long lastBr = Adapter != null ? Adapter.GetIPv4Statistics().BytesReceived : 0;
             Stopwatch sw1 = new Stopwatch();
             long limit = 600000;
             await Task.Run(async () =>
@@ -1831,15 +1954,18 @@ namespace GameOptimizer
                 ulong i = 0;
                 while (true)
                 {
-
                     await AutomaticMemoryCleanup(_cleanUpMemory, sw1, limit);
                     sw.Restart();
-                    var RES = (await IsInternetConnectionAvailable());
-                    isOnline = (RES?.Status ?? IPStatus.Unknown).Equals(IPStatus.Success);
+                    PingReply RES = null;
+                    if (Adapter != null)
+                    {
+                        RES = (await IsInternetConnectionAvailable());
+                        isOnline = (RES?.Status ?? IPStatus.Unknown).Equals(IPStatus.Success);
+                    }
 
                     this.BeginInvoke(new MethodInvoker(delegate
                     {
-                        if (!GetIfConnected(isOnline, RES?.Status))
+                        if (Adapter != null && !GetIfConnected(isOnline, RES?.Status))
                         {
                             if (!timer.Enabled)
                             {
@@ -1850,10 +1976,13 @@ namespace GameOptimizer
                     }));
                     //Thread.Sleep(10);
                     var elapsed = sw.Elapsed.TotalSeconds;
-                    var br = Adapter.GetIPv4Statistics().BytesReceived;
-
-                    double local = (br - lastBr) / elapsed;
-                    lastBr = br;
+                    double local = 0;
+                    if (Adapter != null)
+                    {
+                        var br = Adapter.GetIPv4Statistics().BytesReceived;
+                        local = (br - lastBr) / elapsed;
+                        lastBr = br;
+                    }
 
                     // Keep last 20, ~2 seconds
                     reads = new[] { local }.Concat(reads).Take(20);
@@ -1861,14 +1990,26 @@ namespace GameOptimizer
                     if (i % (ulong)10 == (ulong)0)
                     { // ~1 second
                         var bSec = reads.Sum() / reads.Count();
-
                         var kbs = ((bSec * 8) / 1024) / 8;
+                        var cpuStats = FetchCpuPowerStats();
 
                         this.BeginInvoke(new MethodInvoker(delegate
                         {
-                            lblDlSpeed.Text = "Kb/s " + kbs;
-                            lblInternet.Text = $"{(RES?.Status == IPStatus.Success  ? "Conectado" : $"Sin Conexion ({RES?.Status})")}";
+                            if (Adapter != null)
+                            {
+                                lblDlSpeed.Text = "Kb/s " + kbs;
+                                lblInternet.Text = $"{(RES?.Status == IPStatus.Success ? "Conectado" : $"Sin Conexion ({RES?.Status})")}";
+                            }
+                            else
+                            {
+                                lblDlSpeed.Text = "Kb/s 0";
+                                lblInternet.Text = "No Adapter";
+                            }
+                            
                             lblRamUsage.Text = $"RAM: {GetCurrentMemoryUsage()}/{GetTotalMemoryInMiB()} MB";
+                            lblPowerPlan.Text = cpuStats.Plan;
+                            lblCpuCurrent.Text = cpuStats.Current;
+                            lblCpuProfile.Text = cpuStats.Profile;
                         }));
                     }
 
@@ -1876,8 +2017,8 @@ namespace GameOptimizer
                         i = 0;
 
                     i++;
+                    await Task.Delay(100);
                 }
-
             });
         }
         private void button1_Click(object sender, EventArgs e)

@@ -70,6 +70,9 @@
             this.chkHwSchMode = new System.Windows.Forms.CheckBox();
             this.chkBcdTweaks = new System.Windows.Forms.CheckBox();
             this.cmbTimeSpanTimer = new System.Windows.Forms.ComboBox();
+            this.lblPowerPlan = new System.Windows.Forms.Label();
+            this.lblCpuCurrent = new System.Windows.Forms.Label();
+            this.lblCpuProfile = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.nudAutRamFreeup)).BeginInit();
             this.SuspendLayout();
@@ -455,11 +458,41 @@
             this.cmbTimeSpanTimer.TabIndex = 34;
             this.cmbTimeSpanTimer.SelectedIndexChanged += new System.EventHandler(this.cmbTimeSpanTimer_SelectedIndexChanged);
             // 
+            // lblPowerPlan
+            // 
+            this.lblPowerPlan.AutoSize = true;
+            this.lblPowerPlan.Location = new System.Drawing.Point(564, 181);
+            this.lblPowerPlan.Name = "lblPowerPlan";
+            this.lblPowerPlan.Size = new System.Drawing.Size(70, 13);
+            this.lblPowerPlan.TabIndex = 35;
+            this.lblPowerPlan.Text = "Power Plan: -";
+            // 
+            // lblCpuCurrent
+            // 
+            this.lblCpuCurrent.AutoSize = true;
+            this.lblCpuCurrent.Location = new System.Drawing.Point(567, 196);
+            this.lblCpuCurrent.Name = "lblCpuCurrent";
+            this.lblCpuCurrent.Size = new System.Drawing.Size(63, 13);
+            this.lblCpuCurrent.TabIndex = 37;
+            this.lblCpuCurrent.Text = "CPU Core: -";
+            // 
+            // lblCpuProfile
+            // 
+            this.lblCpuProfile.AutoSize = true;
+            this.lblCpuProfile.Location = new System.Drawing.Point(564, 168);
+            this.lblCpuProfile.Name = "lblCpuProfile";
+            this.lblCpuProfile.Size = new System.Drawing.Size(70, 13);
+            this.lblCpuProfile.TabIndex = 38;
+            this.lblCpuProfile.Text = "CPU Profile: -";
+            // 
             // GameOptimizerForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(689, 219);
+            this.ClientSize = new System.Drawing.Size(686, 229);
+            this.Controls.Add(this.lblCpuProfile);
+            this.Controls.Add(this.lblCpuCurrent);
+            this.Controls.Add(this.lblPowerPlan);
             this.Controls.Add(this.cmbTimeSpanTimer);
             this.Controls.Add(this.chkBcdTweaks);
             this.Controls.Add(this.chkHwSchMode);
@@ -546,6 +579,9 @@
         private System.Windows.Forms.CheckBox chkHwSchMode;
         private System.Windows.Forms.CheckBox chkBcdTweaks;
         private System.Windows.Forms.ComboBox cmbTimeSpanTimer;
+        private System.Windows.Forms.Label lblPowerPlan;
+        private System.Windows.Forms.Label lblCpuCurrent;
+        private System.Windows.Forms.Label lblCpuProfile;
     }
 }
 
