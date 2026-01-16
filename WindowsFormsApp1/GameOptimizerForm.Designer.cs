@@ -73,6 +73,8 @@
             this.lblPowerPlan = new System.Windows.Forms.Label();
             this.lblCpuCurrent = new System.Windows.Forms.Label();
             this.lblCpuProfile = new System.Windows.Forms.Label();
+            this.chkDisableNdu = new System.Windows.Forms.CheckBox();
+            this.chkNetworkOffload = new System.Windows.Forms.CheckBox();
             this.chkWin32Priority = new System.Windows.Forms.CheckBox();
             this.chkDisableSysMain = new System.Windows.Forms.CheckBox();
             this.chkOverlayMinFPS = new System.Windows.Forms.CheckBox();
@@ -493,6 +495,28 @@
             this.lblCpuProfile.TabIndex = 38;
             this.lblCpuProfile.Text = "CPU Profile: -";
             // 
+            // chkDisableNdu
+            // 
+            this.chkDisableNdu.AutoSize = true;
+            this.chkDisableNdu.Location = new System.Drawing.Point(371, 270);
+            this.chkDisableNdu.Name = "chkDisableNdu";
+            this.chkDisableNdu.Size = new System.Drawing.Size(185, 17);
+            this.chkDisableNdu.TabIndex = 48;
+            this.chkDisableNdu.Text = "Disable Network Usage Reporting";
+            this.chkDisableNdu.UseVisualStyleBackColor = true;
+            this.chkDisableNdu.CheckedChanged += new System.EventHandler(this.chkDisableNdu_CheckedChanged);
+            // 
+            // chkNetworkOffload
+            // 
+            this.chkNetworkOffload.AutoSize = true;
+            this.chkNetworkOffload.Location = new System.Drawing.Point(371, 245);
+            this.chkNetworkOffload.Name = "chkNetworkOffload";
+            this.chkNetworkOffload.Size = new System.Drawing.Size(155, 17);
+            this.chkNetworkOffload.TabIndex = 47;
+            this.chkNetworkOffload.Text = "Enable Network Offloading";
+            this.chkNetworkOffload.UseVisualStyleBackColor = true;
+            this.chkNetworkOffload.CheckedChanged += new System.EventHandler(this.chkNetworkOffload_CheckedChanged);
+            // 
             // chkWin32Priority
             // 
             this.chkWin32Priority.AutoSize = true;
@@ -585,6 +609,8 @@
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(700, 321);
+            this.Controls.Add(this.chkDisableNdu);
+            this.Controls.Add(this.chkNetworkOffload);
             this.Controls.Add(this.btnApplyAllNew);
             this.Controls.Add(this.chkMemoryCompression);
             this.Controls.Add(this.chkWindowsCoalescing);
@@ -693,6 +719,8 @@
         private System.Windows.Forms.CheckBox chkWindowsCoalescing;
         private System.Windows.Forms.CheckBox chkMemoryCompression;
         private System.Windows.Forms.Button btnApplyAllNew;
+        private System.Windows.Forms.CheckBox chkNetworkOffload;
+        private System.Windows.Forms.CheckBox chkDisableNdu;
     }
 }
 

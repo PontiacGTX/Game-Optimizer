@@ -2241,6 +2241,8 @@ namespace GameOptimizer
             this.chkWindowsSearch.CheckedChanged -= new System.EventHandler(this.chkWindowsSearch_CheckedChanged);
             this.chkWindowsCoalescing.CheckedChanged -= new System.EventHandler(this.chkWindowsCoalescing_CheckedChanged);
             this.chkMemoryCompression.CheckedChanged -= new System.EventHandler(this.chkMemoryCompression_CheckedChanged);
+            this.chkNetworkOffload.CheckedChanged -= new System.EventHandler(this.chkNetworkOffload_CheckedChanged);
+            this.chkDisableNdu.CheckedChanged -= new System.EventHandler(this.chkDisableNdu_CheckedChanged);
 
             // Initialize OverlayTestMode CheckBox
             if (Environment.OSVersion.Version.Major >= 10)
@@ -2368,6 +2370,32 @@ namespace GameOptimizer
             }
             catch { }
 
+            // Initialize Network Offload
+            try
+            {
+                ProcessStartInfo psi = new ProcessStartInfo("netsh", "int ip show global")
+                {
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+                using (Process p = Process.Start(psi))
+                {
+                    string output = p.StandardOutput.ReadToEnd();
+                    if (output.Contains("Task Offload") && output.Contains("enabled"))
+                        chkNetworkOffload.Checked = true;
+                }
+            }
+            catch { }
+
+            // Initialize Disable NDU
+            try
+            {
+                var value = Registry.GetValue(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Ndu", "Start", null);
+                if (value != null && (int)value == 4) chkDisableNdu.Checked = true;
+            }
+            catch { }
+
             // Re-hook event handlers
             this.chckOverlayTstMode.CheckedChanged += new System.EventHandler(this.chckOverlayTstMode_CheckedChanged);
             this.chkHwSchMode.CheckedChanged += new System.EventHandler(this.chkHwSchMode_CheckedChanged);
@@ -2379,6 +2407,8 @@ namespace GameOptimizer
             this.chkWindowsSearch.CheckedChanged += new System.EventHandler(this.chkWindowsSearch_CheckedChanged);
             this.chkWindowsCoalescing.CheckedChanged += new System.EventHandler(this.chkWindowsCoalescing_CheckedChanged);
             this.chkMemoryCompression.CheckedChanged += new System.EventHandler(this.chkMemoryCompression_CheckedChanged);
+            this.chkNetworkOffload.CheckedChanged += new System.EventHandler(this.chkNetworkOffload_CheckedChanged);
+            this.chkDisableNdu.CheckedChanged += new System.EventHandler(this.chkDisableNdu_CheckedChanged);
         }
 
         private void chkWin32Priority_CheckedChanged(object sender, EventArgs e)
@@ -2476,7 +2506,33 @@ namespace GameOptimizer
             chkWindowsSearch.Checked = true;
             chkWindowsCoalescing.Checked = true;
             chkMemoryCompression.Checked = true;
+            chkNetworkOffload.Checked = true;
+            chkDisableNdu.Checked = true;
             MessageBox.Show("All new optimizations applied!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        private void chkNetworkOffload_CheckedChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                string state = chkNetworkOffload.Checked ? "enabled" : "disabled";
+                Process.Start(new ProcessStartInfo("netsh", $"int ip set global taskoffload={state}")
+                {
+                    Verb = "runas",
+                    CreateNoWindow = true,
+                    UseShellExecute = true
+                }).WaitForExit();
+            }
+            catch (Exception ex) { MessageBox.Show("Error: " + ex.Message); }
+        }
+
+        private void chkDisableNdu_CheckedChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                Registry.SetValue(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Ndu", "Start", chkDisableNdu.Checked ? 4 : 2, RegistryValueKind.DWord);
+            }
+            catch (Exception ex) { MessageBox.Show("Error: " + ex.Message); }
         }
 
         private void cmbTimeSpanTimer_SelectedIndexChanged(object sender, EventArgs e)
