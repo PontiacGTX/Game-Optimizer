@@ -1616,7 +1616,7 @@ namespace GameOptimizer
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void btnProcess_Click(object sender, EventArgs e)
         {
-            this.ClientSize = new System.Drawing.Size(890, 452);
+            this.ClientSize = new System.Drawing.Size(700, 574);
             this.dataGridView1.Enabled = true;
             this.dataGridView1.Visible = true;
             
@@ -2234,6 +2234,13 @@ namespace GameOptimizer
             this.chckOverlayTstMode.CheckedChanged -= new System.EventHandler(this.chckOverlayTstMode_CheckedChanged);
             this.chkHwSchMode.CheckedChanged -= new System.EventHandler(this.chkHwSchMode_CheckedChanged);
             this.chkBcdTweaks.CheckedChanged -= new System.EventHandler(this.chkBcdTweaks_CheckedChanged);
+            this.chkWin32Priority.CheckedChanged -= new System.EventHandler(this.chkWin32Priority_CheckedChanged);
+            this.chkDisableSysMain.CheckedChanged -= new System.EventHandler(this.chkDisableSysMain_CheckedChanged);
+            this.chkOverlayMinFPS.CheckedChanged -= new System.EventHandler(this.chkOverlayMinFPS_CheckedChanged);
+            this.chkPowerThrottling.CheckedChanged -= new System.EventHandler(this.chkPowerThrottling_CheckedChanged);
+            this.chkWindowsSearch.CheckedChanged -= new System.EventHandler(this.chkWindowsSearch_CheckedChanged);
+            this.chkWindowsCoalescing.CheckedChanged -= new System.EventHandler(this.chkWindowsCoalescing_CheckedChanged);
+            this.chkMemoryCompression.CheckedChanged -= new System.EventHandler(this.chkMemoryCompression_CheckedChanged);
 
             // Initialize OverlayTestMode CheckBox
             if (Environment.OSVersion.Version.Major >= 10)
@@ -2292,10 +2299,184 @@ namespace GameOptimizer
             }
             catch { }
 
+            // Initialize Win32PrioritySeparation
+            try
+            {
+                var value = Registry.GetValue(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\PriorityControl", "Win32PrioritySeparation", null);
+                if (value != null && (int)value == 0x28) chkWin32Priority.Checked = true;
+            }
+            catch { }
+
+            // Initialize SysMain
+            try
+            {
+                using (ServiceController sc = new ServiceController("SysMain"))
+                {
+                    if (sc.StartType == ServiceStartMode.Disabled) chkDisableSysMain.Checked = true;
+                }
+            }
+            catch { }
+
+            // Initialize OverlayMinFPS
+            try
+            {
+                var value = Registry.GetValue(@"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Dwm", "OverlayMinFPS", null);
+                if (value != null && (int)value == 0) chkOverlayMinFPS.Checked = true;
+            }
+            catch { }
+
+            // Initialize PowerThrottling
+            try
+            {
+                var value = Registry.GetValue(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling", "PowerThrottlingOff", null);
+                if (value != null && (int)value == 1) chkPowerThrottling.Checked = true;
+            }
+            catch { }
+
+            // Initialize Windows Search
+            try
+            {
+                using (ServiceController sc = new ServiceController("WSearch"))
+                {
+                    if (sc.StartType == ServiceStartMode.Manual || sc.StartType == ServiceStartMode.Disabled) chkWindowsSearch.Checked = true;
+                }
+            }
+            catch { }
+
+            // Initialize Coalescing
+            try
+            {
+                var value = Registry.GetValue(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Session Manager\kernel", "CoalescingTimerDisabled", null);
+                if (value != null && (int)value == 1) chkWindowsCoalescing.Checked = true;
+            }
+            catch { }
+
+            // Initialize Memory Compression
+            try
+            {
+                ProcessStartInfo psi = new ProcessStartInfo("powershell", "-NoProfile -Command \"(Get-MMAgent).MemoryCompression\"")
+                {
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+                using (Process p = Process.Start(psi))
+                {
+                    string output = p.StandardOutput.ReadToEnd().Trim();
+                    if (output.Equals("False", StringComparison.OrdinalIgnoreCase)) chkMemoryCompression.Checked = true;
+                }
+            }
+            catch { }
+
             // Re-hook event handlers
             this.chckOverlayTstMode.CheckedChanged += new System.EventHandler(this.chckOverlayTstMode_CheckedChanged);
             this.chkHwSchMode.CheckedChanged += new System.EventHandler(this.chkHwSchMode_CheckedChanged);
             this.chkBcdTweaks.CheckedChanged += new System.EventHandler(this.chkBcdTweaks_CheckedChanged);
+            this.chkWin32Priority.CheckedChanged += new System.EventHandler(this.chkWin32Priority_CheckedChanged);
+            this.chkDisableSysMain.CheckedChanged += new System.EventHandler(this.chkDisableSysMain_CheckedChanged);
+            this.chkOverlayMinFPS.CheckedChanged += new System.EventHandler(this.chkOverlayMinFPS_CheckedChanged);
+            this.chkPowerThrottling.CheckedChanged += new System.EventHandler(this.chkPowerThrottling_CheckedChanged);
+            this.chkWindowsSearch.CheckedChanged += new System.EventHandler(this.chkWindowsSearch_CheckedChanged);
+            this.chkWindowsCoalescing.CheckedChanged += new System.EventHandler(this.chkWindowsCoalescing_CheckedChanged);
+            this.chkMemoryCompression.CheckedChanged += new System.EventHandler(this.chkMemoryCompression_CheckedChanged);
+        }
+
+        private void chkWin32Priority_CheckedChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                Registry.SetValue(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\PriorityControl", "Win32PrioritySeparation", chkWin32Priority.Checked ? 0x28 : 0x2, RegistryValueKind.DWord);
+            }
+            catch (Exception ex) { MessageBox.Show("Error: " + ex.Message); }
+        }
+
+        private void chkDisableSysMain_CheckedChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo("sc", $"config SysMain start= {(chkDisableSysMain.Checked ? "disabled" : "auto")}") { CreateNoWindow = true, UseShellExecute = true, Verb = "runas" }).WaitForExit();
+                if (chkDisableSysMain.Checked) Process.Start(new ProcessStartInfo("sc", "stop SysMain") { CreateNoWindow = true, UseShellExecute = true, Verb = "runas" }).WaitForExit();
+            }
+            catch (Exception ex) { MessageBox.Show("Error: " + ex.Message); }
+        }
+
+        private void chkOverlayMinFPS_CheckedChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                Registry.SetValue(@"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Dwm", "OverlayMinFPS", chkOverlayMinFPS.Checked ? 0 : 60, RegistryValueKind.DWord);
+            }
+            catch (Exception ex) { MessageBox.Show("Error: " + ex.Message); }
+        }
+
+        private void chkPowerThrottling_CheckedChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                Registry.SetValue(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling", "PowerThrottlingOff", chkPowerThrottling.Checked ? 1 : 0, RegistryValueKind.DWord);
+            }
+            catch (Exception ex) { MessageBox.Show("Error: " + ex.Message); }
+        }
+
+        private void chkWindowsSearch_CheckedChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo("sc", $"config WSearch start= {(chkWindowsSearch.Checked ? "demand" : "auto")}") { CreateNoWindow = true, UseShellExecute = true, Verb = "runas" }).WaitForExit();
+            }
+            catch (Exception ex) { MessageBox.Show("Error: " + ex.Message); }
+        }
+
+        private void chkWindowsCoalescing_CheckedChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                Registry.SetValue(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Session Manager\kernel", "CoalescingTimerDisabled", chkWindowsCoalescing.Checked ? 1 : 0, RegistryValueKind.DWord);
+            }
+            catch (Exception ex) { MessageBox.Show("Error: " + ex.Message); }
+        }
+
+        private void chkMemoryCompression_CheckedChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                if (chkMemoryCompression.Checked)
+                {
+                    ProcessStartInfo psi = new ProcessStartInfo("powershell", "-NoProfile -Command \"(Get-CimInstance Win32_ComputerSystem).AutomaticManagedPagefile\"")
+                    {
+                        RedirectStandardOutput = true,
+                        UseShellExecute = false,
+                        CreateNoWindow = true
+                    };
+                    using (Process p = Process.Start(psi))
+                    {
+                        if (p.StandardOutput.ReadToEnd().Trim().Equals("True", StringComparison.OrdinalIgnoreCase))
+                        {
+                            MessageBox.Show("Memory Compression requires a fixed Pagefile (not automatically managed). SKIPPED.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            chkMemoryCompression.Checked = false;
+                            return;
+                        }
+                    }
+                    Process.Start(new ProcessStartInfo("powershell", "-Command \"Disable-MMAgent -MemoryCompression\"") { CreateNoWindow = true, UseShellExecute = true, Verb = "runas" }).WaitForExit();
+                }
+                else
+                {
+                    Process.Start(new ProcessStartInfo("powershell", "-Command \"Enable-MMAgent -MemoryCompression\"") { CreateNoWindow = true, UseShellExecute = true, Verb = "runas" }).WaitForExit();
+                }
+            }
+            catch (Exception ex) { MessageBox.Show("Error: " + ex.Message); }
+        }
+
+        private void btnApplyAllNew_Click(object sender, EventArgs e)
+        {
+            chkWin32Priority.Checked = true;
+            chkDisableSysMain.Checked = true;
+            chkOverlayMinFPS.Checked = true;
+            chkPowerThrottling.Checked = true;
+            chkWindowsSearch.Checked = true;
+            chkWindowsCoalescing.Checked = true;
+            chkMemoryCompression.Checked = true;
+            MessageBox.Show("All new optimizations applied!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private void cmbTimeSpanTimer_SelectedIndexChanged(object sender, EventArgs e)

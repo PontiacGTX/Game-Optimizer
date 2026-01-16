@@ -73,6 +73,14 @@
             this.lblPowerPlan = new System.Windows.Forms.Label();
             this.lblCpuCurrent = new System.Windows.Forms.Label();
             this.lblCpuProfile = new System.Windows.Forms.Label();
+            this.chkWin32Priority = new System.Windows.Forms.CheckBox();
+            this.chkDisableSysMain = new System.Windows.Forms.CheckBox();
+            this.chkOverlayMinFPS = new System.Windows.Forms.CheckBox();
+            this.chkPowerThrottling = new System.Windows.Forms.CheckBox();
+            this.chkWindowsSearch = new System.Windows.Forms.CheckBox();
+            this.chkWindowsCoalescing = new System.Windows.Forms.CheckBox();
+            this.chkMemoryCompression = new System.Windows.Forms.CheckBox();
+            this.btnApplyAllNew = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.nudAutRamFreeup)).BeginInit();
             this.SuspendLayout();
@@ -285,7 +293,7 @@
             // 
             this.dataGridView1.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             this.dataGridView1.Enabled = false;
-            this.dataGridView1.Location = new System.Drawing.Point(30, 231);
+            this.dataGridView1.Location = new System.Drawing.Point(11, 324);
             this.dataGridView1.Name = "dataGridView1";
             this.dataGridView1.RowHeadersWidth = 51;
             this.dataGridView1.Size = new System.Drawing.Size(464, 213);
@@ -294,7 +302,7 @@
             // 
             // btnKill
             // 
-            this.btnKill.Location = new System.Drawing.Point(30, 450);
+            this.btnKill.Location = new System.Drawing.Point(13, 539);
             this.btnKill.Name = "btnKill";
             this.btnKill.Size = new System.Drawing.Size(75, 23);
             this.btnKill.TabIndex = 21;
@@ -441,7 +449,7 @@
             // chkBcdTweaks
             // 
             this.chkBcdTweaks.AutoSize = true;
-            this.chkBcdTweaks.Location = new System.Drawing.Point(345, 160);
+            this.chkBcdTweaks.Location = new System.Drawing.Point(371, 220);
             this.chkBcdTweaks.Name = "chkBcdTweaks";
             this.chkBcdTweaks.Size = new System.Drawing.Size(136, 17);
             this.chkBcdTweaks.TabIndex = 33;
@@ -485,11 +493,106 @@
             this.lblCpuProfile.TabIndex = 38;
             this.lblCpuProfile.Text = "CPU Profile: -";
             // 
+            // chkWin32Priority
+            // 
+            this.chkWin32Priority.AutoSize = true;
+            this.chkWin32Priority.Location = new System.Drawing.Point(13, 220);
+            this.chkWin32Priority.Name = "chkWin32Priority";
+            this.chkWin32Priority.Size = new System.Drawing.Size(134, 17);
+            this.chkWin32Priority.TabIndex = 39;
+            this.chkWin32Priority.Text = "Optimize Input Latency";
+            this.chkWin32Priority.UseVisualStyleBackColor = true;
+            this.chkWin32Priority.CheckedChanged += new System.EventHandler(this.chkWin32Priority_CheckedChanged);
+            // 
+            // chkDisableSysMain
+            // 
+            this.chkDisableSysMain.AutoSize = true;
+            this.chkDisableSysMain.Location = new System.Drawing.Point(13, 245);
+            this.chkDisableSysMain.Name = "chkDisableSysMain";
+            this.chkDisableSysMain.Size = new System.Drawing.Size(165, 17);
+            this.chkDisableSysMain.TabIndex = 40;
+            this.chkDisableSysMain.Text = "Disable SysMain (Superfetch)";
+            this.chkDisableSysMain.UseVisualStyleBackColor = true;
+            this.chkDisableSysMain.CheckedChanged += new System.EventHandler(this.chkDisableSysMain_CheckedChanged);
+            // 
+            // chkOverlayMinFPS
+            // 
+            this.chkOverlayMinFPS.AutoSize = true;
+            this.chkOverlayMinFPS.Location = new System.Drawing.Point(13, 270);
+            this.chkOverlayMinFPS.Name = "chkOverlayMinFPS";
+            this.chkOverlayMinFPS.Size = new System.Drawing.Size(128, 17);
+            this.chkOverlayMinFPS.TabIndex = 41;
+            this.chkOverlayMinFPS.Text = "Optimize Overlay FPS";
+            this.chkOverlayMinFPS.UseVisualStyleBackColor = true;
+            this.chkOverlayMinFPS.CheckedChanged += new System.EventHandler(this.chkOverlayMinFPS_CheckedChanged);
+            // 
+            // chkPowerThrottling
+            // 
+            this.chkPowerThrottling.AutoSize = true;
+            this.chkPowerThrottling.Location = new System.Drawing.Point(13, 295);
+            this.chkPowerThrottling.Name = "chkPowerThrottling";
+            this.chkPowerThrottling.Size = new System.Drawing.Size(141, 17);
+            this.chkPowerThrottling.TabIndex = 42;
+            this.chkPowerThrottling.Text = "Disable Power Throttling";
+            this.chkPowerThrottling.UseVisualStyleBackColor = true;
+            this.chkPowerThrottling.CheckedChanged += new System.EventHandler(this.chkPowerThrottling_CheckedChanged);
+            // 
+            // chkWindowsSearch
+            // 
+            this.chkWindowsSearch.AutoSize = true;
+            this.chkWindowsSearch.Location = new System.Drawing.Point(220, 220);
+            this.chkWindowsSearch.Name = "chkWindowsSearch";
+            this.chkWindowsSearch.Size = new System.Drawing.Size(145, 17);
+            this.chkWindowsSearch.TabIndex = 43;
+            this.chkWindowsSearch.Text = "Disable Windows Search";
+            this.chkWindowsSearch.UseVisualStyleBackColor = true;
+            this.chkWindowsSearch.CheckedChanged += new System.EventHandler(this.chkWindowsSearch_CheckedChanged);
+            // 
+            // chkWindowsCoalescing
+            // 
+            this.chkWindowsCoalescing.AutoSize = true;
+            this.chkWindowsCoalescing.Location = new System.Drawing.Point(220, 245);
+            this.chkWindowsCoalescing.Name = "chkWindowsCoalescing";
+            this.chkWindowsCoalescing.Size = new System.Drawing.Size(145, 17);
+            this.chkWindowsCoalescing.TabIndex = 44;
+            this.chkWindowsCoalescing.Text = "Disable Timer Coalescing";
+            this.chkWindowsCoalescing.UseVisualStyleBackColor = true;
+            this.chkWindowsCoalescing.CheckedChanged += new System.EventHandler(this.chkWindowsCoalescing_CheckedChanged);
+            // 
+            // chkMemoryCompression
+            // 
+            this.chkMemoryCompression.AutoSize = true;
+            this.chkMemoryCompression.Location = new System.Drawing.Point(220, 270);
+            this.chkMemoryCompression.Name = "chkMemoryCompression";
+            this.chkMemoryCompression.Size = new System.Drawing.Size(164, 17);
+            this.chkMemoryCompression.TabIndex = 45;
+            this.chkMemoryCompression.Text = "Disable Memory Compression";
+            this.chkMemoryCompression.UseVisualStyleBackColor = true;
+            this.chkMemoryCompression.CheckedChanged += new System.EventHandler(this.chkMemoryCompression_CheckedChanged);
+            // 
+            // btnApplyAllNew
+            // 
+            this.btnApplyAllNew.Location = new System.Drawing.Point(220, 295);
+            this.btnApplyAllNew.Name = "btnApplyAllNew";
+            this.btnApplyAllNew.Size = new System.Drawing.Size(150, 23);
+            this.btnApplyAllNew.TabIndex = 46;
+            this.btnApplyAllNew.Text = "Apply All New Optimizations";
+            this.btnApplyAllNew.UseVisualStyleBackColor = true;
+            this.btnApplyAllNew.Click += new System.EventHandler(this.btnApplyAllNew_Click);
+            // 
             // GameOptimizerForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(686, 229);
+            this.ClientSize = new System.Drawing.Size(700, 321);
+            this.Controls.Add(this.btnApplyAllNew);
+            this.Controls.Add(this.chkMemoryCompression);
+            this.Controls.Add(this.chkWindowsCoalescing);
+            this.Controls.Add(this.chkWindowsSearch);
+            this.Controls.Add(this.chkPowerThrottling);
+            this.Controls.Add(this.chkOverlayMinFPS);
+            this.Controls.Add(this.chkDisableSysMain);
+            this.Controls.Add(this.chkWin32Priority);
             this.Controls.Add(this.lblCpuProfile);
             this.Controls.Add(this.lblCpuCurrent);
             this.Controls.Add(this.lblPowerPlan);
@@ -582,6 +685,14 @@
         private System.Windows.Forms.Label lblPowerPlan;
         private System.Windows.Forms.Label lblCpuCurrent;
         private System.Windows.Forms.Label lblCpuProfile;
+        private System.Windows.Forms.CheckBox chkWin32Priority;
+        private System.Windows.Forms.CheckBox chkDisableSysMain;
+        private System.Windows.Forms.CheckBox chkOverlayMinFPS;
+        private System.Windows.Forms.CheckBox chkPowerThrottling;
+        private System.Windows.Forms.CheckBox chkWindowsSearch;
+        private System.Windows.Forms.CheckBox chkWindowsCoalescing;
+        private System.Windows.Forms.CheckBox chkMemoryCompression;
+        private System.Windows.Forms.Button btnApplyAllNew;
     }
 }
 
