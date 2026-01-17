@@ -770,7 +770,7 @@ namespace GameOptimizer
                 return null;
             }
         }
-        private void SetAffinity(ref Process GameProcess)
+        private void SetAffinity(Process GameProcess)
         {
             if (!GameProcess.HasExited)
             {
@@ -1298,12 +1298,12 @@ namespace GameOptimizer
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void SetPriority(ref Process GameProcess, bool running)
+        private void SetPriority(Process GameProcess, bool running)
         {
             Process GameProcess1 = null ;
             if (!running)
             {
-                Thread.Sleep(60000);
+                Thread.Sleep(6000);
                 
                 if (!GameProcess.HasExited)
                 {
@@ -1372,9 +1372,9 @@ namespace GameOptimizer
             if (GameProcess != null)
             {
                 if (!GameProcess.HasExited)
-                    SetAffinity(ref GameProcess);
+                    Task.Run(() => SetAffinity(GameProcess));
                 else if (!GameProcess1.HasExited)
-                    SetAffinity(ref GameProcess1);
+                    Task.Run(() => SetAffinity(GameProcess1));
             }
             if (chckboxPriority.Checked)
             {
@@ -1401,7 +1401,7 @@ namespace GameOptimizer
             {
                 GameProcess = Process.GetProcesses().Where(x =>x.ProcessName ==name && !x.HasExited).Select(x => x).First();
                 GetProcessorCount();
-                SetPriority(ref GameProcess,true);
+                SetPriority(GameProcess,true);
                 firstExecution2 = false;
             }
             else
@@ -1415,7 +1415,7 @@ namespace GameOptimizer
                     GameProcess.Start();
                     GameProcess.PriorityBoostEnabled = true;
                     //GameProcessList = Process.GetProcessesByName(FileName).Where(x => x.HasExited == false).ToList();
-                    SetPriority(ref GameProcess,false);
+                    SetPriority(GameProcess,false);
                 }
                 catch (Exception ex)
                 {
@@ -1673,13 +1673,13 @@ namespace GameOptimizer
                         GameProcess.StartInfo.FileName = GamePath;
                         GameProcess.Start();
                         GameProcess.PriorityBoostEnabled = true;
-                        SetPriority(ref GameProcess,false);
+                        SetPriority(GameProcess,false);
                     }
                     else
                     {
                         GameProcess = Process.GetProcessesByName(PlainName).Where(x => x.HasExited == false).FirstOrDefault();
                         GetProcessorCount();
-                        SetPriority(ref GameProcess,true);
+                        SetPriority(GameProcess,true);
                     }
                 }
             }
