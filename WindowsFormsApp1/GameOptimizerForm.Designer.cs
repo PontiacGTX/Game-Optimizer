@@ -83,6 +83,7 @@
             this.chkWindowsCoalescing = new System.Windows.Forms.CheckBox();
             this.chkMemoryCompression = new System.Windows.Forms.CheckBox();
             this.btnApplyAllNew = new System.Windows.Forms.Button();
+            this.cmbProcessPriority = new System.Windows.Forms.ComboBox();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.nudAutRamFreeup)).BeginInit();
             this.SuspendLayout();
@@ -144,13 +145,15 @@
             // 
             this.cmbxAffinityCount.FormattingEnabled = true;
             this.cmbxAffinityCount.Items.AddRange(new object[] {
-            "-",
+            "Auto",
             "2c/2t",
             "2c/4t",
             "4c/4t",
             "4c/8t",
             "8c/8t",
-            "8c/16t"});
+            "8c/16t",
+            "24c/24t",
+            "24c/32t"});
             this.cmbxAffinityCount.Location = new System.Drawing.Point(168, 42);
             this.cmbxAffinityCount.Name = "cmbxAffinityCount";
             this.cmbxAffinityCount.Size = new System.Drawing.Size(121, 21);
@@ -273,8 +276,7 @@
             this.chckboxPriority.Size = new System.Drawing.Size(153, 17);
             this.chckboxPriority.TabIndex = 18;
             this.chckboxPriority.Text = "Set Priority every 5 minutes";
-            this.chckboxPriority.UseVisualStyleBackColor = true;
-            this.chckboxPriority.CheckedChanged += new System.EventHandler(this.ChckboxPriority_CheckedChanged);
+            this.chckboxPriority.UseVisualStyleBackColor = true;            this.chckboxPriority.CheckedChanged += new System.EventHandler(this.ChckboxPriority_CheckedChanged);
             // 
             // tmrPriority
             // 
@@ -500,7 +502,7 @@
             this.chkDisableNdu.AutoSize = true;
             this.chkDisableNdu.Location = new System.Drawing.Point(371, 270);
             this.chkDisableNdu.Name = "chkDisableNdu";
-            this.chkDisableNdu.Size = new System.Drawing.Size(185, 17);
+            this.chkDisableNdu.Size = new System.Drawing.Size(187, 17);
             this.chkDisableNdu.TabIndex = 48;
             this.chkDisableNdu.Text = "Disable Network Usage Reporting";
             this.chkDisableNdu.UseVisualStyleBackColor = true;
@@ -511,7 +513,7 @@
             this.chkNetworkOffload.AutoSize = true;
             this.chkNetworkOffload.Location = new System.Drawing.Point(371, 245);
             this.chkNetworkOffload.Name = "chkNetworkOffload";
-            this.chkNetworkOffload.Size = new System.Drawing.Size(155, 17);
+            this.chkNetworkOffload.Size = new System.Drawing.Size(153, 17);
             this.chkNetworkOffload.TabIndex = 47;
             this.chkNetworkOffload.Text = "Enable Network Offloading";
             this.chkNetworkOffload.UseVisualStyleBackColor = true;
@@ -604,11 +606,29 @@
             this.btnApplyAllNew.UseVisualStyleBackColor = true;
             this.btnApplyAllNew.Click += new System.EventHandler(this.btnApplyAllNew_Click);
             // 
+            // cmbProcessPriority
+            // 
+            this.cmbProcessPriority.FormattingEnabled = true;
+            this.cmbProcessPriority.Location = new System.Drawing.Point(190, 75);
+            this.cmbProcessPriority.Name = "cmbProcessPriority";
+            this.cmbProcessPriority.Size = new System.Drawing.Size(121, 21);
+            this.cmbProcessPriority.TabIndex = 49;
+            this.cmbProcessPriority.Items.AddRange(new object[] {
+            "Realtime",
+            "High",
+            "Above normal",
+            "Normal",
+            "Below normal",
+            "Low"
+            });
+            this.cmbProcessPriority.SelectedIndexChanged += new System.EventHandler(this.cmbProcessPriority_SelectedIndexChanged);
+            // 
             // GameOptimizerForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(700, 321);
+            this.Controls.Add(this.cmbProcessPriority);
             this.Controls.Add(this.chkDisableNdu);
             this.Controls.Add(this.chkNetworkOffload);
             this.Controls.Add(this.btnApplyAllNew);
@@ -721,6 +741,7 @@
         private System.Windows.Forms.Button btnApplyAllNew;
         private System.Windows.Forms.CheckBox chkNetworkOffload;
         private System.Windows.Forms.CheckBox chkDisableNdu;
+        private System.Windows.Forms.ComboBox cmbProcessPriority;
     }
 }
 

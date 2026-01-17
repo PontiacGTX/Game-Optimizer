@@ -107,6 +107,7 @@ namespace GameOptimizer
         }
 
         Process[] ProcessArray;
+        private System.Diagnostics.ProcessPriorityClass Priority { get; set; }
 
         public List<ProcessList> ListItems { get; private set; }
 
@@ -149,7 +150,7 @@ namespace GameOptimizer
             public static readonly Int32 CoreOneToEight = 0x00FF;
 
             // New masks for 24-core CPUs
-            public static readonly Int64 TwentyFourCoreSmt = 0xFFFFFFFF;
+            public static readonly Int64 TwentyFourCoreSmt = 0xFFFFFFFFFFFF;
             public static readonly Int64 TwentyFourCoreSmtNoSMT = 0xFFFF5555; // 13900HX: 8 physical P-cores + 16 E-cores
             public static readonly Int64 TwentyFourCoreSmtHalfPhysical = 0x000F5555; // 13900HX: 8 physical P + 4 E = 12 physical
             public static readonly Int64 TwentyFourCoreNoSmt = 0x00FFFFFF; // 275HX: 24 physical cores (no SMT)
@@ -219,7 +220,44 @@ namespace GameOptimizer
             StartUpCheck();
             InitializeTimer();
             SetTimerTimeSpan();
+            SetPriorityLevel();
         }
+
+        private void SetPriorityLevel()
+        {
+            this.cmbProcessPriority.SelectedIndex =0;
+            SetPriority();
+        }
+
+        private void SetPriority()
+        {
+            switch (cmbProcessPriority.SelectedIndex)
+            {
+                case 0:
+                    Priority = ProcessPriorityClass.RealTime;
+                    break;
+                case 1:
+                    Priority = ProcessPriorityClass.AboveNormal;
+                    break;
+                case 2:
+                    Priority = ProcessPriorityClass.High;
+                    break;
+                case 3:
+                    Priority = ProcessPriorityClass.Normal;
+                    break;
+                case 4:
+                    Priority = ProcessPriorityClass.BelowNormal;
+                    break;
+                case 5:
+                    Priority = ProcessPriorityClass.Idle;
+                    break;
+                default:
+                    Priority = ProcessPriorityClass.RealTime;
+                    break;
+            }
+        }
+
+
 
         private void SetTimerTimeSpan()
         {
@@ -646,7 +684,11 @@ namespace GameOptimizer
             }
 
             if (ThreadCount == 8 && Cores == 8)
+            {
                 this.cmbxAffinityCount.Items.Remove("8c/16t");
+                this.cmbxAffinityCount.Items.Remove("24c/24t");
+                this.cmbxAffinityCount.Items.Remove("24c/32t");
+            }
             else if (Cores == 4 && ThreadCount == 4)
             {
                 this.cmbxAffinityCount.Items.Remove("4c/8t");
@@ -686,6 +728,7 @@ namespace GameOptimizer
             }
             if (Cores == 24 && ThreadCount == 24)
             {
+                this.cmbxAffinityCount.Items.Remove("24c/32t");
                 if (!this.cmbxAffinityCount.Items.Contains("24c/24t"))
                     this.cmbxAffinityCount.Items.Add("24c/24t");
             }
@@ -775,20 +818,6 @@ namespace GameOptimizer
                         }
                         GameProcess.ProcessorAffinity = (IntPtr)SelectedCoreCount.OctoCoreSMT;
                     }
-                    if (Cores == 24 && ThreadCount == 32)
-                    {
-                        for (int i = 0; i < GameProcess.Threads.Count; i++)
-                        {
-                            try
-                            {
-                                GameProcess.Threads[i].ProcessorAffinity = (IntPtr)SelectedCoreCount.TwentyFourCoreSmt;
-                            }
-                            catch (Exception ex)
-                            {
-                            }
-                        }
-                        GameProcess.ProcessorAffinity = (IntPtr)SelectedCoreCount.TwentyFourCoreSmt;
-                    }
                     if (Cores == 24 && ThreadCount == 24)
                     {
                         for (int i = 0; i < GameProcess.Threads.Count; i++)
@@ -796,13 +825,33 @@ namespace GameOptimizer
                             try
                             {
                                 GameProcess.Threads[i].ProcessorAffinity = (IntPtr)SelectedCoreCount.TwentyFourCoreNoSmt;
+                                GameProcess.ProcessorAffinity = (IntPtr)SelectedCoreCount.TwentyFourCoreNoSmt;
                             }
                             catch (Exception ex)
                             {
                             }
                         }
-                        GameProcess.ProcessorAffinity = (IntPtr)SelectedCoreCount.TwentyFourCoreNoSmt;
                     }
+                    if (Cores == 24 && ThreadCount == 32)
+                    {
+                        for (int i = 0; i < GameProcess.Threads.Count; i++)
+                        {
+                            long affinityMask = (1L << 24) - 1;
+                            try
+                            {
+                                long mask = (1L << ThreadCount) - 1; 
+                                long systemMaskLong = GameProcess.ProcessorAffinity.ToInt64();
+                                long first32Threads = 0xFFFFFFFFL;  // All 32 logical threads (0-31)
+                                long safeMask = systemMaskLong & first32Threads;
+                                GameProcess.Threads[i].ProcessorAffinity = new IntPtr(affinityMask);// new IntPtr(SelectedCoreCount.TwentyFourCoreSmt);;
+                                GameProcess.ProcessorAffinity = (IntPtr)SelectedCoreCount.TwentyFourCoreSmt;
+                            }
+                            catch (Exception ex)
+                            {
+                            }
+                        }
+                    }
+                    
 
                     GameProcess.Refresh();
                 }
@@ -1246,6 +1295,8 @@ namespace GameOptimizer
             } 
         }
 
+
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void SetPriority(ref Process GameProcess, bool running)
         {
@@ -1269,7 +1320,7 @@ namespace GameOptimizer
                         {
                         }
                     }
-                    GameProcess.PriorityClass = System.Diagnostics.ProcessPriorityClass.RealTime;
+                    GameProcess.PriorityClass = Priority;
                     GameProcess.Refresh();
                 }
             }
@@ -1291,7 +1342,7 @@ namespace GameOptimizer
                         }
 
                     }
-                    GameProcess.PriorityClass = System.Diagnostics.ProcessPriorityClass.RealTime;
+                    GameProcess.PriorityClass =Priority;
                     GameProcess.Refresh();
                 }
                 else
@@ -1304,7 +1355,7 @@ namespace GameOptimizer
                         try
                         {
                             GameProcess1.Threads[i].PriorityLevel = System.Diagnostics.ThreadPriorityLevel.TimeCritical;
-                            GameProcess1.Threads[i].PriorityBoostEnabled = true;
+                            GameProcess1.Threads[i].PriorityBoostEnabled = true; 
                         }
                         catch (Exception ex)
                         {
@@ -1312,7 +1363,7 @@ namespace GameOptimizer
                         }
 
                     }
-                    GameProcess1.PriorityClass = System.Diagnostics.ProcessPriorityClass.RealTime;
+                    GameProcess1.PriorityClass = Priority;
                     GameProcess1.Refresh();
                     GameProcess = GameProcess1;
                     GameProcess.Refresh();
@@ -1560,6 +1611,46 @@ namespace GameOptimizer
 
         private void CmbxTime_SelectedIndexChanged(object sender, EventArgs e)
         {
+            if(cmbxAffinityCount.SelectedIndex == 1)
+            {
+                Cores = 2;
+                ThreadCount = 2;
+            }
+            else if(cmbxAffinityCount.SelectedIndex==2)
+            {
+                Cores = 2;
+                ThreadCount = 4;
+            }
+            else if (cmbxAffinityCount.SelectedIndex == 3)
+            {
+                Cores = 4;
+                ThreadCount = 4;
+            }
+            else if (cmbxAffinityCount.SelectedIndex == 4)
+            {
+                Cores = 4;
+                ThreadCount = 8;
+            }
+            else if (cmbxAffinityCount.SelectedIndex == 5)
+            {
+                Cores = 8;
+                ThreadCount = 8;
+            }
+            else if (cmbxAffinityCount.SelectedIndex == 6)
+            {
+                Cores = 8;
+                ThreadCount = 16;
+            }
+            else if (cmbxAffinityCount.SelectedIndex == 7)
+            {
+                Cores = 24;
+                ThreadCount = 24;
+            }
+            else if (cmbxAffinityCount.SelectedIndex == 8)
+            {
+                Cores = 24;
+                ThreadCount = 32;
+            } 
             SetAffinity();
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -2556,6 +2647,11 @@ namespace GameOptimizer
                     tmrRam.Interval = 900_000;
                     break;
             }
+        }
+
+        private void cmbProcessPriority_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            SetPriority();
         }
     }
 }
