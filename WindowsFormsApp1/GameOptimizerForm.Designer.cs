@@ -84,6 +84,8 @@
             this.chkMemoryCompression = new System.Windows.Forms.CheckBox();
             this.btnApplyAllNew = new System.Windows.Forms.Button();
             this.cmbProcessPriority = new System.Windows.Forms.ComboBox();
+            this.lblDynamicPriority = new System.Windows.Forms.Label();
+            this.cmbxDynamicPriority = new System.Windows.Forms.ComboBox();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.nudAutRamFreeup)).BeginInit();
             this.SuspendLayout();
@@ -97,7 +99,7 @@
             // 
             // selectPath
             // 
-            this.selectPath.Location = new System.Drawing.Point(30, 42);
+            this.selectPath.Location = new System.Drawing.Point(30, 38);
             this.selectPath.Name = "selectPath";
             this.selectPath.Size = new System.Drawing.Size(85, 26);
             this.selectPath.TabIndex = 1;
@@ -154,9 +156,9 @@
             "8c/16t",
             "24c/24t",
             "24c/32t"});
-            this.cmbxAffinityCount.Location = new System.Drawing.Point(168, 42);
+            this.cmbxAffinityCount.Location = new System.Drawing.Point(220, 42);
             this.cmbxAffinityCount.Name = "cmbxAffinityCount";
-            this.cmbxAffinityCount.Size = new System.Drawing.Size(121, 21);
+            this.cmbxAffinityCount.Size = new System.Drawing.Size(106, 21);
             this.cmbxAffinityCount.TabIndex = 5;
             this.cmbxAffinityCount.SelectedIndexChanged += new System.EventHandler(this.CmbxTime_SelectedIndexChanged);
             // 
@@ -276,7 +278,8 @@
             this.chckboxPriority.Size = new System.Drawing.Size(153, 17);
             this.chckboxPriority.TabIndex = 18;
             this.chckboxPriority.Text = "Set Priority every 5 minutes";
-            this.chckboxPriority.UseVisualStyleBackColor = true;            this.chckboxPriority.CheckedChanged += new System.EventHandler(this.ChckboxPriority_CheckedChanged);
+            this.chckboxPriority.UseVisualStyleBackColor = true;
+            this.chckboxPriority.CheckedChanged += new System.EventHandler(this.ChckboxPriority_CheckedChanged);
             // 
             // tmrPriority
             // 
@@ -609,25 +612,55 @@
             // cmbProcessPriority
             // 
             this.cmbProcessPriority.FormattingEnabled = true;
-            this.cmbProcessPriority.Location = new System.Drawing.Point(190, 75);
-            this.cmbProcessPriority.Name = "cmbProcessPriority";
-            this.cmbProcessPriority.Size = new System.Drawing.Size(121, 21);
-            this.cmbProcessPriority.TabIndex = 49;
             this.cmbProcessPriority.Items.AddRange(new object[] {
             "Realtime",
             "High",
             "Above normal",
             "Normal",
             "Below normal",
-            "Low"
-            });
+            "Low"});
+            this.cmbProcessPriority.Location = new System.Drawing.Point(190, 75);
+            this.cmbProcessPriority.Name = "cmbProcessPriority";
+            this.cmbProcessPriority.Size = new System.Drawing.Size(121, 21);
+            this.cmbProcessPriority.TabIndex = 49;
             this.cmbProcessPriority.SelectedIndexChanged += new System.EventHandler(this.cmbProcessPriority_SelectedIndexChanged);
+            // 
+            // lblDynamicPriority
+            // 
+            this.lblDynamicPriority.AutoSize = true;
+            this.lblDynamicPriority.Location = new System.Drawing.Point(114, 38);
+            this.lblDynamicPriority.Name = "lblDynamicPriority";
+            this.lblDynamicPriority.Size = new System.Drawing.Size(85, 13);
+            this.lblDynamicPriority.TabIndex = 53;
+            this.lblDynamicPriority.Text = "Dynamic Priority:";
+            // 
+            // cmbxDynamicPriority
+            // 
+            this.cmbxDynamicPriority.DrawMode = System.Windows.Forms.DrawMode.OwnerDrawFixed;
+            this.cmbxDynamicPriority.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cmbxDynamicPriority.FormattingEnabled = true;
+            this.cmbxDynamicPriority.Items.AddRange(new object[] {
+            "Idle",
+            "Lowest",
+            "BelowNormal",
+            "Normal",
+            "AboveNormal",
+            "Highest",
+            "TimeCritical"});
+            this.cmbxDynamicPriority.Location = new System.Drawing.Point(118, 53);
+            this.cmbxDynamicPriority.Name = "cmbxDynamicPriority";
+            this.cmbxDynamicPriority.Size = new System.Drawing.Size(96, 21);
+            this.cmbxDynamicPriority.TabIndex = 54;
+            this.cmbxDynamicPriority.DrawItem += new System.Windows.Forms.DrawItemEventHandler(this.cmbxDynamicPriority_DrawItem);
+            this.cmbxDynamicPriority.SelectedIndexChanged += new System.EventHandler(this.cmbxDynamicPriority_SelectedIndexChanged);
             // 
             // GameOptimizerForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(700, 321);
+            this.Controls.Add(this.cmbxDynamicPriority);
+            this.Controls.Add(this.lblDynamicPriority);
             this.Controls.Add(this.cmbProcessPriority);
             this.Controls.Add(this.chkDisableNdu);
             this.Controls.Add(this.chkNetworkOffload);
@@ -742,6 +775,8 @@
         private System.Windows.Forms.CheckBox chkNetworkOffload;
         private System.Windows.Forms.CheckBox chkDisableNdu;
         private System.Windows.Forms.ComboBox cmbProcessPriority;
+        private System.Windows.Forms.Label lblDynamicPriority;
+        private System.Windows.Forms.ComboBox cmbxDynamicPriority;
     }
 }
 

@@ -150,7 +150,7 @@ namespace GameOptimizer
             public static readonly Int32 CoreOneToEight = 0x00FF;
 
             // New masks for 24-core CPUs
-            public static readonly Int64 TwentyFourCoreSmt = 0xFFFFFFFFFFFF;
+            public static readonly Int64 TwentyFourCoreSmt = 0xFFFFFFFF;
             public static readonly Int64 TwentyFourCoreSmtNoSMT = 0xFFFF5555; // 13900HX: 8 physical P-cores + 16 E-cores
             public static readonly Int64 TwentyFourCoreSmtHalfPhysical = 0x000F5555; // 13900HX: 8 physical P + 4 E = 12 physical
             public static readonly Int64 TwentyFourCoreNoSmt = 0x00FFFFFF; // 275HX: 24 physical cores (no SMT)
@@ -182,6 +182,16 @@ namespace GameOptimizer
         private List<uint> coreBaseFrequencies = new List<uint>();
         private bool countersInitialized = false;
 
+        private PerformanceCounter procQueueCounter;
+        private PerformanceCounter cpuUsageCounter;
+        private System.Windows.Forms.Timer tmrDynamicPrio;
+        private System.Diagnostics.ThreadPriorityLevel currentDynamicPriority = System.Diagnostics.ThreadPriorityLevel.Normal;
+
+        private DateTime lastStabilityCheck = DateTime.MinValue;
+        private DateTime lastTickTime = DateTime.MinValue;
+        private DateTime lockoutPenaltyUntil = DateTime.MinValue;
+        private bool lastStabilityResult = true;
+
         private uint DefaultResolution;
         private uint MininumResolution;
         private uint MaximumResolution;
@@ -196,6 +206,13 @@ namespace GameOptimizer
         private Task mainTask;
         private Task memoryTask;
         private bool failedInternetStartupCheck;
+        
+        // Responsiveness Watchdog
+        private System.Windows.Forms.Timer tmrStability;
+        private DateTime lastStabilityTick = DateTime.MinValue;
+        private bool isAffinityPenalized = false;
+        private DateTime affinityPenaltyUntil = DateTime.MinValue;
+        private IntPtr cachedOriginalAffinity = IntPtr.Zero;
         private bool isOnline;
 
         private enum ThreadPriorityLevel
@@ -206,26 +223,39 @@ namespace GameOptimizer
             TimeCritical = 15,
         }
 
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            ResetGamePriority(GameProcess); 
+            base.OnFormClosing(e);
+        }
+
         public GameOptimizerForm()
         {
-            Adapter =  System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces().FirstOrDefault(n => n.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up && n.Description.Contains("Ethernet") || n.OperationalStatus == OperationalStatus.Up && n.Description.Contains("MediaTek Wi-Fi 6 MT7921 Wireless LAN Card"));
+            Adapter = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces().FirstOrDefault(n => n.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up && n.Description.Contains("Ethernet") || n.OperationalStatus == OperationalStatus.Up && n.Description.Contains("MediaTek Wi-Fi 6 MT7921 Wireless LAN Card"));
             _cleanUpMemory = new PropertyCleanup { WasCleaned = false };
             InitializeComponent();
             GetProcessorCount();
-            ClearStandByList();
+            
+            // Critical UI only
             GetCurrentTimerResolution();
-            StopServicesAndProcess();
-            EmptyWorkingSet();
             InitializeRegistryCheckboxes();
-            StartUpCheck();
-            InitializeTimer();
             SetTimerTimeSpan();
             SetPriorityLevel();
+
+            // Fire and forget deep system tasks
+            _ = Task.Run(async () => {
+                await StartUpCheck();
+                StopServicesAndProcess();
+                ClearStandByList();
+                EmptyWorkingSet();
+                InitializeTimer();
+            });
         }
 
         private void SetPriorityLevel()
         {
-            this.cmbProcessPriority.SelectedIndex =0;
+            this.cmbProcessPriority.SelectedIndex = 0;
+            this.cmbxDynamicPriority.SelectedIndex = 4; // AboveNormal
             SetPriority();
         }
 
@@ -272,7 +302,155 @@ namespace GameOptimizer
             tmrRam.Interval = 900000;
             tmrRam.Enabled = true;
             tmrRam.Start();
+
+            // Run Intensive Monitoring/Priority logic in Background
+            _ = Task.Run(async () => {
+                try {
+                    if (cpuUsageCounter == null) 
+                    {
+                        cpuUsageCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
+                        cpuUsageCounter.NextValue();
+                    }
+                } catch {}
+
+                while (true) {
+                    try {
+                        await RunDynamicPriorityLogic();
+                    } catch { }
+                    await Task.Delay(2000);
+                }
+            });
         }
+
+        private async Task RunDynamicPriorityLogic()
+        {
+            if (GameProcess == null || GameProcess.HasExited) return;
+
+            // Determine Target Priority from UI Selection
+            System.Diagnostics.ThreadPriorityLevel uiSelectedLevel = System.Diagnostics.ThreadPriorityLevel.AboveNormal;
+            if (cmbxDynamicPriority.InvokeRequired)
+            {
+                cmbxDynamicPriority.Invoke(new Action(() => { uiSelectedLevel = GetSelectedThreadPriority(); }));
+            }
+            else
+            {
+                uiSelectedLevel = GetSelectedThreadPriority();
+            }
+
+            System.Diagnostics.ThreadPriorityLevel targetLevel = uiSelectedLevel;
+            
+            bool isStable = await Task.Run(() => IsSystemStableForTimeCritical());
+            
+            if (!isStable)
+            {
+                // Unstable -> Force Normal or lower to allow system to recover
+                if (targetLevel > System.Diagnostics.ThreadPriorityLevel.Normal)
+                    targetLevel = System.Diagnostics.ThreadPriorityLevel.Normal; 
+            }
+
+            // Responsiveness Check (Background based)
+            DateTime now = DateTime.Now;
+            if (lastTickTime != DateTime.MinValue)
+            {
+                double msSinceLast = (now - lastTickTime).TotalMilliseconds;
+                double delay = msSinceLast - 2000;
+
+                if (delay > 5000) 
+                {
+                    // Severe delay -> Force Normal
+                    lockoutPenaltyUntil = now.AddSeconds(30);
+                    targetLevel = System.Diagnostics.ThreadPriorityLevel.Normal;
+                }
+                else if (delay > 2000)
+                {
+                    // Moderate delay -> Max AboveNormal
+                    lockoutPenaltyUntil = now.AddSeconds(15);
+                    if (targetLevel > System.Diagnostics.ThreadPriorityLevel.AboveNormal)
+                        targetLevel = System.Diagnostics.ThreadPriorityLevel.AboveNormal;
+                }
+            }
+            lastTickTime = now;
+
+            if (now < lockoutPenaltyUntil)
+            {
+                // While under penalty, we force Normal
+                targetLevel = System.Diagnostics.ThreadPriorityLevel.Normal;
+            }
+
+            currentDynamicPriority = targetLevel;
+
+            try { 
+                GameProcess.Refresh();
+                foreach (ProcessThread thread in GameProcess.Threads)
+                {
+                     SetThreadPriorityDynamic(thread);
+                }
+            } catch {}
+
+            // Periodically refresh dropdown colors if open
+            if (DateTime.Now.Second % 5 == 0)
+            {
+                cmbxDynamicPriority.Invalidate();
+            }
+        }
+
+        private System.Diagnostics.ThreadPriorityLevel GetSelectedThreadPriority()
+        {
+            if (cmbxDynamicPriority.SelectedItem == null) return System.Diagnostics.ThreadPriorityLevel.AboveNormal;
+            switch (cmbxDynamicPriority.SelectedItem.ToString())
+            {
+                case "Idle": return System.Diagnostics.ThreadPriorityLevel.Idle;
+                case "Lowest": return System.Diagnostics.ThreadPriorityLevel.Lowest;
+                case "BelowNormal": return System.Diagnostics.ThreadPriorityLevel.BelowNormal;
+                case "Normal": return System.Diagnostics.ThreadPriorityLevel.Normal;
+                case "AboveNormal": return System.Diagnostics.ThreadPriorityLevel.AboveNormal;
+                case "Highest": return System.Diagnostics.ThreadPriorityLevel.Highest;
+                case "TimeCritical": return System.Diagnostics.ThreadPriorityLevel.TimeCritical;
+                default: return System.Diagnostics.ThreadPriorityLevel.AboveNormal;
+            }
+        }
+
+        private void cmbxDynamicPriority_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            // Trigger an immediate update if the game is running
+            if (GameProcess != null && !GameProcess.HasExited)
+            {
+                _ = RunDynamicPriorityLogic();
+            }
+        }
+
+        private void cmbxDynamicPriority_DrawItem(object sender, DrawItemEventArgs e)
+        {
+            if (e.Index < 0) return;
+
+            string text = cmbxDynamicPriority.Items[e.Index].ToString();
+            System.Diagnostics.ThreadPriorityLevel level = System.Diagnostics.ThreadPriorityLevel.Normal;
+            
+            switch (text)
+            {
+                case "Idle": level = System.Diagnostics.ThreadPriorityLevel.Idle; break;
+                case "Lowest": level = System.Diagnostics.ThreadPriorityLevel.Lowest; break;
+                case "BelowNormal": level = System.Diagnostics.ThreadPriorityLevel.BelowNormal; break;
+                case "Normal": level = System.Diagnostics.ThreadPriorityLevel.Normal; break;
+                case "AboveNormal": level = System.Diagnostics.ThreadPriorityLevel.AboveNormal; break;
+                case "Highest": level = System.Diagnostics.ThreadPriorityLevel.Highest; break;
+                case "TimeCritical": level = System.Diagnostics.ThreadPriorityLevel.TimeCritical; break;
+            }
+
+            // Determine if unstable
+            bool isUnstable = false;
+            if (!lastStabilityResult && level > System.Diagnostics.ThreadPriorityLevel.Normal) isUnstable = true;
+            if (DateTime.Now < lockoutPenaltyUntil && level > System.Diagnostics.ThreadPriorityLevel.Normal) isUnstable = true;
+
+            e.DrawBackground();
+            using (Brush textBrush = new SolidBrush(isUnstable ? Color.Red : e.ForeColor))
+            {
+                e.Graphics.DrawString(text, e.Font, textBrush, e.Bounds);
+            }
+            e.DrawFocusRectangle();
+        }
+
+        // Removed TmrDynamicPrio_Tick as it's now handled by background Task RunDynamicPriorityLogic
 
         const int SE_PRIVILEGE_ENABLED = 2;
         const string SE_INCREASE_QUOTA_NAME = "SeIncreaseQuotaPrivilege";
@@ -737,12 +915,19 @@ namespace GameOptimizer
         {
             try
             {
-                var reply = await IsInternetConnectionAvailable();
-                status = reply;
-                isOnline = reply != null && reply.Status == IPStatus.Success;
-                secondaryTask = Task.FromResult(isOnline);
+                status = IsInternetConnectionAvailable().Result;
+                secondaryTask = Task.FromResult(status.Status.Equals(IPStatus.Success));
 
-                _ = GetNetworkSpeed();
+                if (Adapter != null)
+                {
+                   
+                    mainTask = new Task(async () =>
+                    {
+                        await GetNetworkSpeed();
+                    });
+
+                    mainTask.Start();
+                }
             }
             catch (Exception ex)
             {
@@ -818,21 +1003,21 @@ namespace GameOptimizer
                         }
                         GameProcess.ProcessorAffinity = (IntPtr)SelectedCoreCount.OctoCoreSMT;
                     }
-                    if (Cores == 24 && ThreadCount == 24)
+                    if (Cores == 24 && ThreadCount == 32)
                     {
                         for (int i = 0; i < GameProcess.Threads.Count; i++)
                         {
                             try
                             {
-                                GameProcess.Threads[i].ProcessorAffinity = (IntPtr)SelectedCoreCount.TwentyFourCoreNoSmt;
-                                GameProcess.ProcessorAffinity = (IntPtr)SelectedCoreCount.TwentyFourCoreNoSmt;
+                                GameProcess.Threads[i].ProcessorAffinity = (IntPtr)SelectedCoreCount.TwentyFourCoreSmt;
                             }
                             catch (Exception ex)
                             {
                             }
                         }
+                        GameProcess.ProcessorAffinity = (IntPtr)SelectedCoreCount.TwentyFourCoreSmt;
                     }
-                    if (Cores == 24 && ThreadCount == 32)
+                    if (Cores == 24 && ThreadCount == 24)
                     {
                         for (int i = 0; i < GameProcess.Threads.Count; i++)
                         {
@@ -1311,10 +1496,8 @@ namespace GameOptimizer
                     {
                         try
                         {
-                            if (GameProcess.Threads[i].ThreadState != (ThreadState)4)
-                                GameProcess.Threads[i].PriorityLevel = System.Diagnostics.ThreadPriorityLevel.TimeCritical;
+                            SetThreadPriorityDynamic(GameProcess.Threads[i]);
                             GameProcess.Threads[i].PriorityBoostEnabled = true;
-
                         }
                         catch (Exception ex)
                         {
@@ -1333,7 +1516,7 @@ namespace GameOptimizer
                     {
                         try
                         {
-                            GameProcess.Threads[i].PriorityLevel = System.Diagnostics.ThreadPriorityLevel.TimeCritical;
+                            SetThreadPriorityDynamic(GameProcess.Threads[i]);
                             GameProcess.Threads[i].PriorityBoostEnabled = true;
                         }
                         catch (Exception ex)
@@ -1354,7 +1537,7 @@ namespace GameOptimizer
                     {
                         try
                         {
-                            GameProcess1.Threads[i].PriorityLevel = System.Diagnostics.ThreadPriorityLevel.TimeCritical;
+                            SetThreadPriorityDynamic(GameProcess1.Threads[i]);
                             GameProcess1.Threads[i].PriorityBoostEnabled = true; 
                         }
                         catch (Exception ex)
@@ -1386,10 +1569,119 @@ namespace GameOptimizer
             }
             else
             {
-
                 tmrPriority.Enabled = false;
                 tmrPriority.Stop();
+                //ResetGamePriority(GameProcess);
+                //if (GameProcess1 != null) ResetGamePriority(GameProcess1);
             }
+        }
+
+        private void ResetGamePriority(Process process)
+        {
+            if (process == null) return;
+            try
+            {
+                if (!process.HasExited)
+                {
+                    process.PriorityClass = ProcessPriorityClass.Normal;
+                    foreach (ProcessThread thread in process.Threads)
+                    {
+                        try
+                        {
+                            thread.PriorityLevel = System.Diagnostics.ThreadPriorityLevel.Normal;
+                        }
+                        catch { }
+                    }
+                    process.Refresh();
+                }
+            }
+            catch { }
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool IsSystemStableForTimeCritical()
+        {
+            if ((DateTime.Now - lastStabilityCheck).TotalSeconds < 2)
+                return lastStabilityResult;
+
+            lastStabilityCheck = DateTime.Now;
+            try
+            {
+                // 1. Check for Power Throttling / Firmware limits (User's specific error fix)
+                int count = Environment.ProcessorCount;
+                int size = Marshal.SizeOf<PROCESSOR_POWER_INFORMATION>();
+                IntPtr buffer = Marshal.AllocHGlobal(size * count);
+                try
+                {
+                    if (CallNtPowerInformation(11, IntPtr.Zero, 0, buffer, size * count) == 0)
+                    {
+                        for (int i = 0; i < count; i++)
+                        {
+                            var nfo = Marshal.PtrToStructure<PROCESSOR_POWER_INFORMATION>(buffer + (i * size));
+                            // If CurrentMhz is lower than base (MaxMhz), system is throttled.
+                            if (nfo.CurrentMhz < (nfo.MaxMhz - 10)) 
+                            {
+                                lastStabilityResult = false;
+                                return false; 
+                            }
+                        }
+                    }
+                }
+                finally { Marshal.FreeHGlobal(buffer); }
+
+                // 2. Check System Load (Processor Queue)
+                if (procQueueCounter == null)
+                {
+                    procQueueCounter = new PerformanceCounter("System", "Processor Queue Length");
+                    procQueueCounter.NextValue();
+                }
+                
+                if (procQueueCounter.NextValue() > (count * 2)) 
+                {
+                    lastStabilityResult = false;
+                    return false;
+                }
+
+                // 3. Stability check: Offline power status (Battery) often triggers throttling
+                if (SystemInformation.PowerStatus.PowerLineStatus == PowerLineStatus.Offline)
+                {
+                    lastStabilityResult = false;
+                    return false;
+                }
+            }
+            catch { }
+
+            lastStabilityResult = true;
+            return true;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void SetThreadPriorityDynamic(ProcessThread thread)
+        {
+            try
+            {
+                if (thread.ThreadState == (ThreadState)4) return;
+                
+                var priorityToTry = currentDynamicPriority;
+
+                // Optimization: Skip if already set
+                try {
+                     if (thread.PriorityLevel == priorityToTry) return;
+                } catch { }
+
+                try
+                {
+                    thread.PriorityLevel = priorityToTry;
+                }
+                catch
+                {
+                    // Fallback: If requested level fails, try Normal as safe baseline
+                    if (priorityToTry > System.Diagnostics.ThreadPriorityLevel.Normal)
+                    {
+                        try { thread.PriorityLevel = System.Diagnostics.ThreadPriorityLevel.Normal; } catch {}
+                    }
+                }
+            }
+            catch { }
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void StartProcess()
@@ -1423,6 +1715,7 @@ namespace GameOptimizer
                 }
             }
         }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void ClearStandByList()
         {
@@ -1702,12 +1995,20 @@ namespace GameOptimizer
                     tmrPriority.Enabled = true;
                     tmrPriority.Start();
                 }
+                // Apply immediately
+                if (GameProcess != null) SetPriority(GameProcess, true);
+            }
+            else
+            {
+                tmrPriority.Stop();
+                tmrPriority.Enabled = false;
+                //ResetGamePriority(GameProcess);
             }
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void btnProcess_Click(object sender, EventArgs e)
         {
-            this.ClientSize = new System.Drawing.Size(700, 574);
+            this.ClientSize = new System.Drawing.Size(890, 452);
             this.dataGridView1.Enabled = true;
             this.dataGridView1.Visible = true;
             
